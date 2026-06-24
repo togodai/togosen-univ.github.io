@@ -33,6 +33,18 @@ export const INITIAL_SERIES = [
 
 export const INITIAL_ARTICLES = [
   {
+    id: "image-upload-test",
+    seriesId: "sarkaz",
+    title: "【画像テスト】CMSアップロード画像の表示確認",
+    category: "お知らせ",
+    tags: ["検証", "画像アップロード"],
+    status: "published",
+    content: "## アップロード画像のプレビューテスト\n\n新しくアップロードした画像（テレジア）が正しく表示されるかテストします。\n\n![Theresa Image](images/uploads/1782300945149_theresa.png)\n\n画像の表示が正常であればテストは成功です。",
+    createdAt: "2026-06-24T20:40:00Z",
+    updatedAt: "2026-06-24T20:40:00Z",
+    history: []
+  },
+  {
     id: "sami-hard-mode-guide",
     seriesId: "sami",
     title: "探索者と銀氷 of Sami 難易度15 攻略基礎理論",

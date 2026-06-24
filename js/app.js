@@ -1449,7 +1449,11 @@ function renderCMSDashboard(container) {
             <i data-lucide="settings" style="width:16px;"></i> GitHub 連携設定
           </button>
           
-          <button class="cms-nav-btn cms-logout-btn" id="cms-logout-action" style="margin-top: 2rem;">
+          <button class="cms-nav-btn" onclick="location.hash='#home'" style="margin-top: 2rem;">
+            <i data-lucide="home" style="width:16px;"></i> トップページへ戻る
+          </button>
+          
+          <button class="cms-nav-btn cms-logout-btn" id="cms-logout-action" style="margin-top: 0.5rem;">
             <i data-lucide="log-out" style="width:16px;"></i> ログアウト
           </button>
         </aside>
@@ -2270,8 +2274,9 @@ function renderGitHubSettings(target) {
         <input type="text" id="gh-branch" class="form-control" value="${settings.branch || 'main'}" required>
       </div>
 
-      <div class="cms-form-buttons" style="margin-top: 2rem;">
+      <div class="cms-form-buttons" style="margin-top: 2rem; display: flex; gap: 1rem;">
         <button type="submit" class="btn-primary">設定を保存する</button>
+        <button type="button" class="btn-secondary" onclick="location.hash='#home'">トップページへ戻る</button>
       </div>
     </form>
 
