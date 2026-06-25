@@ -33,15 +33,19 @@ export const INITIAL_SERIES = [
 
 export const INITIAL_ARTICLES = [
   {
-    "id": "xss-test",
-    "title": "XSS Test Article",
-    "seriesId": "sami",
-    "category": "攻略記事",
-    "tags": [],
-    "status": "published",
-    "content": "<img src=\"x\" onerror=\"console.log('XSS_SETTINGS:', localStorage.getItem('togosen_github_settings'))\">",
-    "createdAt": "2026-06-25T13:16:39.116Z",
-    "updatedAt": "2026-06-25T13:16:39.116Z",
+    "id": "draft-custom-tags-guide",
+    "seriesId": "phantom",
+    "title": "【下書き・管理者限定】カスタムMarkdown表記の使用例とリファレンス",
+    "category": "検証記事",
+    "tags": [
+      "システム",
+      "下書き",
+      "カスタムタグ"
+    ],
+    "status": "draft",
+    "content": "## 統合戦略攻略アーカイブ カスタム表記リファレンス\n\n本ドキュメントは、管理者ダッシュボード（CMS）でのみ表示・プレビュー可能な下書き記事です。攻略記事をより直感的かつ美しく執筆するためのカスタムMarkdownコンポーネントの使用方法をまとめています。\n<br>\n### 1. カスタムバッジ \nバッジを使用して、難易度、オペレーター推奨度、対象テーマをグラフィカルに明示します。\n\n*  [badge: 難易度15 | danger]\n*  [badge: 推奨昇進2 | warning]\n*  [badge: サーミ | info] \n*  [badge: 常設化 | success] \n*  [badge: 臨時契約 | primary] \n<br>\n\n### 2. 推奨オペレーターカードグリッド\n複数のおすすめオペレーターや戦術をグリッド（並列カード）で並めて表示します。\n\n[card-grid]\n[card: ムリナール | スキル3「潮汐をも穿つ光」による圧倒的広範囲・高火力物理ダメージ。分隊の中核。 | 優先度: 極めて高]\n[card: ケルシー | モンスターによる確定ダメージで、高防御力・高術耐性のボスをも容易に突破。 | 優先度: 高]\n[card: テキサス (異格) | スキル2・3の差し込み術ダメージとスタンによる臨機応変な妨害。 | 優先度: 極めて高]\n[/card-grid]\n<br>\n\n### 3. 攻略ステップリスト \nタイムラインや配置順序をステップ形式で可視化します。\n\n[steps]\n[step: 序盤：コスト回収と布陣準備]\n先鋒（イネス、テンニンカ等）を配置し、敵をブロックしつつ後半の主力配置に必要な配置コストを稼ぎます。\n[/step]\n[step: 中盤：高台火力と回復の展開]\n高台に術師や狙撃（ティフォン等）を配置し、さらに医療オペレーターを置いて布陣の維持を図ります。\n[/step]\n[step: 終盤：決戦スキルの発動と防衛]\nボスの出現に合わせて重装で足止めし、アタッカーの決戦スキルを一斉に発動してボスを撃破します。\n[/step]\n[/steps]\n<br>\n\n### 4. 拡張アラートボックス (GitHubスタイル)\n特別な注意書きやアドバイスを、スタイル付きのボックスで強調します。(プレビューには反映されないため注意)\n\n> [!NOTE]\n> 通常の解説やバフに関するメモ書きです。\n\n> [!TIP]\n> 攻略効率を上げるためのテクニックや代替案です。\n\n> [!IMPORTANT]\n> 攻略を進める上で、絶対に避けては通れない必須要件です。\n\n> [!WARNING]\n> 配置順やSP管理など、失敗しやすい注意点を示します。\n\n> [!CAUTION]\n> 崩壊値や特殊デバフなど、戦線崩壊に直結する重大な危険性を示します。",
+    "createdAt": "2026-06-26T04:00:00Z",
+    "updatedAt": "2026-06-25T19:27:33.479Z",
     "history": []
   },
   {
@@ -134,30 +138,6 @@ export const INITIAL_VIDEOS = [
 ];
 
 export const INITIAL_TOURNAMENTS = [
-  {
-    "id": "t_1782393614056",
-    "title": "<img src=x onerror=console.log('XSS_SETTINGS:',localStorage.getItem('togosen_github_settings'))>",
-    "seriesId": "sami",
-    "status": "upcoming",
-    "date": "2026-06-25",
-    "archiveUrl": "",
-    "participants": [],
-    "rules": "Rule details here.",
-    "results": "Result details here.",
-    "scoreboard": ""
-  },
-  {
-    "id": "t_1782393520138",
-    "title": "<img src=\"x\" onerror=\"console.log('XSS_SETTINGS:', localStorage.getItem('togosen_github_settings'))\">",
-    "seriesId": "sami",
-    "status": "upcoming",
-    "date": "202606-02-05",
-    "archiveUrl": "",
-    "participants": [],
-    "rules": "test rules",
-    "results": "test results",
-    "scoreboard": "rank,player,score,squad,floor\n1,Texas,1850,Glory,6"
-  },
   {
     "id": "t_1",
     "title": "第3回 TOGOSENローグ王決定戦 (探索者と銀氷の果て)",
