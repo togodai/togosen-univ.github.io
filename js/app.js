@@ -45,11 +45,177 @@ if (window.location.search.includes("reset=true")) {
   initDB();
 }
 
+// System Configurations (GitHub & Cloudinary settings)
+function getSystemSettings() {
+  return {
+    token: "TOKEN_REDACTED",
+    owner: "umi3link5-sudo",
+    repo: "togosen-univ.github.io",
+    branch: "main",
+    cloudinaryCloudName: "dzmcouhv9",
+    cloudinaryPreset: "TOGOSEN Univ"
+  };
+}
+
 // Global DOM elements
 const appContainer = document.getElementById("app");
 
+// Inject Custom Modal CSS style
+// Inject Custom Modal CSS style
+function injectModalCSS() {
+  if (document.getElementById("custom-modal-styles")) return;
+  const style = document.createElement("style");
+  style.id = "custom-modal-styles";
+  style.textContent = `
+    .custom-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+    .custom-modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .custom-modal-box {
+      background-color: #ffffff;
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 450px;
+      padding: 1.5rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+      transform: translateY(20px);
+      transition: transform 0.2s ease;
+      text-align: left;
+    }
+    .custom-modal-overlay.active .custom-modal-box {
+      transform: translateY(0);
+    }
+    .custom-modal-title {
+      font-family: var(--font-outfit), sans-serif;
+      font-size: 1.2rem;
+      font-weight: 700;
+      margin-bottom: 0.75rem;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #e53935;
+    }
+    .custom-modal-message {
+      font-size: 0.9rem;
+      color: #4a5568;
+      line-height: 1.5;
+      margin-bottom: 1.5rem;
+    }
+    .custom-modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 0.75rem;
+    }
+    .custom-modal-btn {
+      padding: 0.5rem 1.25rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: 4px;
+      cursor: pointer;
+      border: none;
+      transition: all 0.15s ease;
+    }
+    .custom-modal-btn.cancel {
+      background: none;
+      color: #475569;
+      border: 1px solid #cbd5e1;
+    }
+    .custom-modal-btn.cancel:hover {
+      background-color: rgba(0, 0, 0, 0.05);
+      color: #1e293b;
+    }
+    .custom-modal-btn.confirm-del {
+      background-color: #e53935;
+      color: #ffffff;
+    }
+    .custom-modal-btn.confirm-del:hover {
+      background-color: #d32f2f;
+      box-shadow: 0 0 10px rgba(229, 57, 53, 0.3);
+    }
+  `;
+  document.head.appendChild(style);
+}
+
+// Show Premium Custom Confirm Modal
+function showCustomConfirm(message, onConfirm) {
+  let overlay = document.getElementById("custom-confirm-modal");
+  if (!overlay) {
+    overlay = document.createElement("div");
+    overlay.id = "custom-confirm-modal";
+    overlay.className = "custom-modal-overlay";
+    document.body.appendChild(overlay);
+  }
+
+  overlay.innerHTML = `
+    <div class="custom-modal-box">
+      <div class="custom-modal-title">
+        <i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>
+        CONFIRM ACTION
+      </div>
+      <div class="custom-modal-message">${message}</div>
+      <div class="custom-modal-actions">
+        <button class="custom-modal-btn cancel" id="custom-modal-cancel-btn">キャンセル</button>
+        <button class="custom-modal-btn confirm-del" id="custom-modal-confirm-btn">削除する</button>
+      </div>
+    </div>
+  `;
+
+  if (window.lucide) {
+    window.lucide.createIcons({
+      attrs: { class: 'lucide' },
+      node: overlay
+    });
+  }
+
+  setTimeout(() => {
+    overlay.classList.add("active");
+  }, 10);
+
+  const closeModal = () => {
+    overlay.classList.remove("active");
+    setTimeout(() => {
+      overlay.remove(); // DOMから完全に削除
+    }, 200);
+  };
+
+  overlay.querySelector("#custom-modal-cancel-btn").addEventListener("click", () => {
+    closeModal();
+  });
+
+  overlay.querySelector("#custom-modal-confirm-btn").addEventListener("click", () => {
+    closeModal();
+    if (typeof onConfirm === "function") {
+      onConfirm();
+    }
+  });
+
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) {
+      closeModal();
+    }
+  });
+}
+
 // Initialize application
 function init() {
+  injectModalCSS();
   // Setup routing listener
   window.addEventListener("hashchange", handleRouting);
   // Initial route
@@ -78,9 +244,13 @@ function handleRouting() {
     console.log("Routing to about/community");
     renderAbout(mainContent);
   } else if (hash.startsWith("#is/")) {
-    const seriesId = hash.replace("#is/", "");
-    console.log("Routing to series:", seriesId);
-    renderSeries(mainContent, seriesId);
+    const rawPath = hash.replace("#is/", "");
+    const parts = rawPath.split("?");
+    const seriesId = parts[0];
+    const params = new URLSearchParams(parts[1] || "");
+    const activeTab = params.get("tab") || "overview";
+    console.log("Routing to series:", seriesId, "activeTab:", activeTab);
+    renderSeries(mainContent, seriesId, activeTab);
   } else if (hash.startsWith("#article/")) {
     const articleId = hash.replace("#article/", "");
     console.log("Routing to article detail:", articleId);
@@ -193,9 +363,9 @@ function ensureLayoutRendered() {
       menuList.classList.toggle("mobile-active");
       const icon = hamburger.querySelector("i");
       if (menuList.classList.contains("mobile-active")) {
-        icon.setAttribute("data-lucide", "x");
+        icon?.setAttribute("data-lucide", "x");
       } else {
-        icon.setAttribute("data-lucide", "menu");
+        icon?.setAttribute("data-lucide", "menu");
       }
       if (window.lucide) window.lucide.createIcons();
     });
@@ -205,7 +375,7 @@ function ensureLayoutRendered() {
       item.addEventListener("click", () => {
         menuList.classList.remove("mobile-active");
         const icon = hamburger.querySelector("i");
-        icon.setAttribute("data-lucide", "menu");
+        icon?.setAttribute("data-lucide", "menu");
         if (window.lucide) window.lucide.createIcons();
       });
     });
@@ -232,9 +402,18 @@ function formatDate(isoString) {
   return `${date.getFullYear()}/${String(date.getMonth() + 1).padStart(2, "0")}/${String(date.getDate()).padStart(2, "0")}`;
 }
 
+// Get filtered articles based on admin login status
+function getFilteredArticles() {
+  const allArticles = getArticles();
+  if (isAdminLoggedIn()) {
+    return allArticles;
+  }
+  return allArticles.filter(a => a.status === "published");
+}
+
 // Get the latest overall update date from all data
 function getLatestUpdateDate() {
-  const articles = getArticles();
+  const articles = getFilteredArticles();
   const videos = getVideos();
   const tournaments = getTournaments();
 
@@ -250,7 +429,7 @@ function getLatestUpdateDate() {
 
 // --- RENDERING HOME ---
 function renderHome(container) {
-  const articles = getArticles().filter(a => a.status === "published");
+  const articles = getFilteredArticles();
   const videos = getVideos();
   const tournaments = getTournaments();
   const seriesList = getSeries();
@@ -262,7 +441,7 @@ function renderHome(container) {
   articles.forEach(a => {
     updates.push({
       type: "article",
-      title: `記事更新: ${a.title}`,
+      title: a.status === "draft" ? `[下書き] 記事更新: ${a.title}` : `記事更新: ${a.title}`,
       date: a.updatedAt || a.createdAt,
       link: `#article/${a.id}`
     });
@@ -272,7 +451,7 @@ function renderHome(container) {
       type: "video",
       title: `動画追加: ${v.title}`,
       date: v.publishedAt + "T00:00:00Z",
-      link: `#is/${v.seriesId}`
+      link: `#is/${v.seriesId}?tab=videos`
     });
   });
   tournaments.forEach(t => {
@@ -347,6 +526,9 @@ function renderHome(container) {
             ${featuredArticles.map(a => {
               const series = getSeriesById(a.seriesId);
               const excerpt = a.content.replace(/[#*`>\[\]\n]/g, " ").slice(0, 120) + "...";
+              const draftBadge = a.status === "draft" 
+                ? `<span class="article-status-badge draft" style="background-color: var(--color-accent); color: var(--color-bg); font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; margin-right: 0.5rem; text-transform: uppercase; border-radius: 2px; vertical-align: middle;">下書き</span>` 
+                : "";
               return `
                 <article class="article-card-row">
                   <div class="article-card-content">
@@ -356,7 +538,7 @@ function renderHome(container) {
                       <span class="article-category-badge">${a.category}</span>
                     </div>
                     <h3 class="article-card-title">
-                      <a href="#article/${a.id}">${a.title}</a>
+                      ${draftBadge}<a href="#article/${a.id}">${a.title}</a>
                     </h3>
                     <p class="article-card-excerpt">${excerpt}</p>
                     <div class="article-tags">
@@ -383,14 +565,14 @@ function renderHome(container) {
                   ? `<img src="https://img.youtube.com/vi/${videoId}/mqdefault.jpg" alt="" style="position: absolute; top:0; left:0; width:100%; height:100%; object-fit:cover; z-index:1;">`
                   : `<span>YOUTUBE</span>`;
                 return `
-                  <div class="video-mini-card">
+                  <div class="video-mini-card" onclick="location.hash='#is/${v.seriesId}?tab=videos'" style="cursor:pointer;">
                     <div class="video-thumb-placeholder">
                       ${thumbHtml}
                       <div class="video-thumb-play" style="z-index:2;"><i data-lucide="play" style="width:12px; height:12px; fill:currentColor;"></i></div>
                     </div>
                     <div class="video-mini-info">
                       <h3 class="video-mini-title">
-                        <a href="#is/${v.seriesId}">${v.title}</a>
+                        <a href="#is/${v.seriesId}?tab=videos">${v.title}</a>
                       </h3>
                       <div class="video-mini-meta">${v.publishedAt}</div>
                     </div>
@@ -550,7 +732,7 @@ function renderAbout(container) {
 }
 
 // --- RENDERING INTEGRATED STRATEGIES (SERIES DETAILS) ---
-function renderSeries(container, seriesId) {
+function renderSeries(container, seriesId, initialTab = "overview") {
   const series = getSeriesById(seriesId);
   if (!series) {
     container.innerHTML = `<div class="container"><h2>アーカイブが見つかりません。</h2></div>`;
@@ -558,7 +740,7 @@ function renderSeries(container, seriesId) {
   }
 
   // Filter content for this series
-  const articles = getArticles().filter(a => a.seriesId === seriesId && a.status === "published");
+  const articles = getFilteredArticles().filter(a => a.seriesId === seriesId);
   const videos = getVideos().filter(v => v.seriesId === seriesId);
   const tournaments = getTournaments().filter(t => t.seriesId === seriesId);
 
@@ -590,16 +772,16 @@ function renderSeries(container, seriesId) {
 
       <!-- Tab Buttons -->
       <div class="tabs">
-        <button class="tab-btn active" data-tab="overview">概要</button>
-        <button class="tab-btn" data-tab="articles">攻略記事 (${articles.length})</button>
-        <button class="tab-btn" data-tab="videos">関連動画 (${videos.length})</button>
-        <button class="tab-btn" data-tab="tournaments">大会関連 (${tournaments.length})</button>
-        <button class="tab-btn" data-tab="history">更新履歴 (${historyList.length})</button>
+        <button class="tab-btn ${initialTab === 'overview' ? 'active' : ''}" data-tab="overview">概要</button>
+        <button class="tab-btn ${initialTab === 'articles' ? 'active' : ''}" data-tab="articles">攻略記事 (${articles.length})</button>
+        <button class="tab-btn ${initialTab === 'videos' ? 'active' : ''}" data-tab="videos">関連動画 (${videos.length})</button>
+        <button class="tab-btn ${initialTab === 'tournaments' ? 'active' : ''}" data-tab="tournaments">大会関連 (${tournaments.length})</button>
+        <button class="tab-btn ${initialTab === 'history' ? 'active' : ''}" data-tab="history">更新履歴 (${historyList.length})</button>
       </div>
 
       <!-- Tab Content Panels -->
       <!-- PANEL 1: Overview -->
-      <div class="tab-content active" id="tab-overview">
+      <div class="tab-content ${initialTab === 'overview' ? 'active' : ''}" id="tab-overview">
         <div class="series-grid">
           <div>
             <h3 class="font-outfit" style="font-size:1.15rem; margin-bottom:1rem;">注目の最新記事</h3>
@@ -607,6 +789,9 @@ function renderSeries(container, seriesId) {
               <div class="featured-articles-list">
                 ${articles.slice(0, 2).map(a => {
                   const excerpt = a.content.replace(/[#*`>\[\]\n]/g, " ").slice(0, 110) + "...";
+                  const draftBadge = a.status === "draft" 
+                    ? `<span class="article-status-badge draft" style="background-color: var(--color-accent); color: var(--color-bg); font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; margin-right: 0.5rem; text-transform: uppercase; border-radius: 2px; vertical-align: middle;">下書き</span>` 
+                    : "";
                   return `
                     <div class="article-card-row" style="padding: 1rem 0;">
                       <div class="article-card-content">
@@ -615,7 +800,7 @@ function renderSeries(container, seriesId) {
                           <span class="article-category-badge">${a.category}</span>
                         </div>
                         <h4 style="font-size:1.1rem; font-weight:700; margin-bottom:0.5rem;">
-                          <a href="#article/${a.id}">${a.title}</a>
+                          ${draftBadge}<a href="#article/${a.id}">${a.title}</a>
                         </h4>
                         <p class="article-card-excerpt" style="font-size:0.85rem;">${excerpt}</p>
                       </div>
@@ -649,11 +834,14 @@ function renderSeries(container, seriesId) {
       </div>
 
       <!-- PANEL 2: Articles -->
-      <div class="tab-content" id="tab-articles">
+      <div class="tab-content ${initialTab === 'articles' ? 'active' : ''}" id="tab-articles">
         ${articles.length > 0 ? `
           <div class="featured-articles-list">
             ${articles.map(a => {
               const excerpt = a.content.replace(/[#*`>\[\]\n]/g, " ").slice(0, 120) + "...";
+              const draftBadge = a.status === "draft" 
+                ? `<span class="article-status-badge draft" style="background-color: var(--color-accent); color: var(--color-bg); font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; margin-right: 0.5rem; text-transform: uppercase; border-radius: 2px; vertical-align: middle;">下書き</span>` 
+                : "";
               return `
                 <article class="article-card-row">
                   <div class="article-card-content">
@@ -662,7 +850,7 @@ function renderSeries(container, seriesId) {
                       <span class="article-category-badge">${a.category}</span>
                     </div>
                     <h3 class="article-card-title">
-                      <a href="#article/${a.id}">${a.title}</a>
+                      ${draftBadge}<a href="#article/${a.id}">${a.title}</a>
                     </h3>
                     <p class="article-card-excerpt">${excerpt}</p>
                     <div class="article-tags">
@@ -677,7 +865,7 @@ function renderSeries(container, seriesId) {
       </div>
 
       <!-- PANEL 3: Videos -->
-      <div class="tab-content" id="tab-videos">
+      <div class="tab-content ${initialTab === 'videos' ? 'active' : ''}" id="tab-videos">
         ${videos.length > 0 ? `
           <div class="video-grid">
             ${videos.map(v => `
@@ -702,7 +890,7 @@ function renderSeries(container, seriesId) {
       </div>
 
       <!-- PANEL 4: Tournaments -->
-      <div class="tab-content" id="tab-tournaments">
+      <div class="tab-content ${initialTab === 'tournaments' ? 'active' : ''}" id="tab-tournaments">
         ${tournaments.length > 0 ? `
           <div class="featured-articles-list">
             ${tournaments.map(t => `
@@ -728,7 +916,7 @@ function renderSeries(container, seriesId) {
       </div>
 
       <!-- PANEL 5: History -->
-      <div class="tab-content" id="tab-history">
+      <div class="tab-content ${initialTab === 'history' ? 'active' : ''}" id="tab-history">
         ${historyList.length > 0 ? `
           <div class="history-list" style="max-width:800px; margin:0 auto;">
             ${historyList.map(h => `
@@ -771,8 +959,10 @@ function renderArticleDetail(container, articleId) {
   try {
     console.log("renderArticleDetail start for", articleId);
     const article = getArticleById(articleId);
-    if (!article) {
-      console.log("article not found");
+    
+    // 記事が存在しない、または下書き状態かつ管理者がログインしていない場合
+    if (!article || (article.status === "draft" && !isAdminLoggedIn())) {
+      console.log("article not found or not published and user not logged in");
       container.innerHTML = `
         <div class="container text-center" style="padding:5rem 0;">
           <h2>指定された記事が見つかりません。</h2>
@@ -784,10 +974,10 @@ function renderArticleDetail(container, articleId) {
 
     const series = getSeriesById(article.seriesId);
     console.log("series:", series);
-    const articlesList = getArticles().filter(a => a.status === "published" && a.id !== article.id);
+    const articlesList = getFilteredArticles().filter(a => a.id !== article.id);
     
-    // 同シリーズの公開記事一覧（左サイドバー用）
-    const seriesArticles = getArticles().filter(a => a.seriesId === article.seriesId && a.status === "published");
+    // 同シリーズの記事一覧（左サイドバー用）
+    const seriesArticles = getFilteredArticles().filter(a => a.seriesId === article.seriesId);
     
     // Calculate related articles (simple tag matching)
     const relatedArticles = articlesList
@@ -820,18 +1010,31 @@ function renderArticleDetail(container, articleId) {
               ${series ? series.title : "アーカイブ一覧"}
             </div>
             <ul class="article-nav-list">
-              ${seriesArticles.map(sa => `
-                <li class="article-nav-item">
-                  <a href="#article/${sa.id}" class="article-nav-link ${sa.id === article.id ? 'active' : ''}">
-                    ${sa.title}
-                  </a>
-                </li>
-              `).join("")}
+              ${seriesArticles.map(sa => {
+                const draftSuffix = sa.status === "draft" ? " [下書き]" : "";
+                return `
+                  <li class="article-nav-item">
+                    <a href="#article/${sa.id}" class="article-nav-link ${sa.id === article.id ? 'active' : ''}">
+                      ${sa.title}${draftSuffix}
+                    </a>
+                  </li>
+                `;
+              }).join("")}
             </ul>
           </aside>
 
           <!-- Main Article Container -->
           <article>
+            <!-- Preview Banner for Draft Articles -->
+            ${article.status === "draft" ? `
+              <div style="background-color: rgba(255, 152, 0, 0.1); border-left: 4px solid #ff9800; padding: 1rem; margin-bottom: 1.5rem; border-radius: 4px; display: flex; align-items: center; gap: 0.75rem;">
+                <i data-lucide="eye" style="color: #ff9800; flex-shrink: 0;"></i>
+                <div style="font-size: 0.85rem; color: var(--color-text); text-align: left; width: 100%;">
+                  <strong style="color: #ff9800;">下書きプレビューモード:</strong> この記事は現在下書き状態です。CMSにログインしているため表示されていますが、一般ユーザーには非公開です。
+                </div>
+              </div>
+            ` : ""}
+
             <div class="article-header">
               <div class="article-meta-info">
                 <span><i data-lucide="folder"></i> ${series ? series.title : "共通"}</span>
@@ -1392,9 +1595,7 @@ function renderCMSLogin(container) {
           <div class="form-group">
             <label for="cms-password">セキュリティパスワード</label>
             <input type="password" id="cms-password" class="form-control" placeholder="••••••••" required>
-            <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 0.5rem; text-align:center;">
-              ※ デモ用パスワード: <code style="font-weight: 700; color:var(--color-accent);">togosen</code>
-            </div>
+
           </div>
           <button type="submit" class="btn-primary" style="width: 100%; margin-top: 1.5rem;">認証実行</button>
         </form>
@@ -1556,10 +1757,10 @@ function renderCMSList(target) {
     target.querySelectorAll(".cms-action-btn.delete").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
-        if (confirm(`本当にこの記事「${id}」を削除しますか？`)) {
+        showCustomConfirm(`本当にこの記事「${id}」を削除しますか？`, () => {
           deleteArticle(id);
           renderCMSDashboard(document.getElementById("app"));
-        }
+        });
       });
     });
 
@@ -1622,10 +1823,10 @@ function renderCMSList(target) {
     target.querySelectorAll(".cms-action-btn.delete").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
-        if (confirm("本当にこの動画アーカイブを削除しますか？")) {
+        showCustomConfirm("本当にこの動画アーカイブを削除しますか？", () => {
           deleteVideo(id);
           renderCMSDashboard(document.getElementById("app"));
-        }
+        });
       });
     });
 
@@ -1688,10 +1889,10 @@ function renderCMSList(target) {
     target.querySelectorAll(".cms-action-btn.delete").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
-        if (confirm("本当にこの大会記録を削除しますか？")) {
+        showCustomConfirm("本当にこの大会記録を削除しますか？", () => {
           deleteTournament(id);
           renderCMSDashboard(document.getElementById("app"));
-        }
+        });
       });
     });
   } else if (cmsActiveTab === "suggestions") {
@@ -1726,10 +1927,10 @@ function renderCMSList(target) {
     target.querySelectorAll(".cms-action-btn.delete").forEach(btn => {
       btn.addEventListener("click", () => {
         const id = btn.getAttribute("data-id");
-        if (confirm("この提案を解決済として削除しますか？")) {
+        showCustomConfirm("この提案を解決済として削除しますか？", () => {
           deleteSuggestion(id);
           renderCMSDashboard(document.getElementById("app"));
-        }
+        });
       });
     });
   } else if (cmsActiveTab === "github-settings") {
@@ -1845,7 +2046,7 @@ function renderCMSForm(target) {
                 <span>記事本文 (Markdown記法)</span>
                 <span class="image-uploader-wrapper">
                   <label for="form-article-image-upload" id="form-article-image-upload-label" class="btn-primary" style="font-size:0.75rem; padding:0.25rem 0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
-                    <i data-lucide="image" style="width:14px; height:14px;"></i> 画像を挿入 (GitHubへアップロード)
+                    <i data-lucide="image" style="width:14px; height:14px;"></i> 画像を挿入 (Cloudinaryへアップロード)
                   </label>
                   <input type="file" id="form-article-image-upload" accept="image/*" style="display:none;">
                 </span>
@@ -1909,7 +2110,7 @@ function renderCMSForm(target) {
       });
     });
 
-    // Hook Image Upload (GitHub API Integration)
+    // Hook Image Upload (Cloudinary Integration)
     const imageUploadInput = target.querySelector("#form-article-image-upload");
     const imageUploadLabel = target.querySelector("#form-article-image-upload-label");
     
@@ -1923,9 +2124,9 @@ function renderCMSForm(target) {
           return;
         }
 
-        const settings = JSON.parse(localStorage.getItem("togosen_github_settings") || "{}");
+        const settings = getSystemSettings();
         if (!settings.token) {
-          alert("画像をアップロードするには、先に「GitHub 連携設定」タブでアクセストークンを設定してください。");
+          alert("記事を保存・公開するため、先に「GitHub & 画像ホスティング連携設定」タブで GitHub のアクセストークンを設定してください。");
           imageUploadInput.value = "";
           return;
         }
@@ -1935,47 +2136,33 @@ function renderCMSForm(target) {
           imageUploadLabel.style.pointerEvents = "none";
           imageUploadLabel.innerHTML = `<span class="image-upload-spinner"></span> アップロード中...`;
 
-          const reader = new FileReader();
-          reader.onload = async (event) => {
-            try {
-              const base64Data = event.target.result;
-              const rawBase64 = base64Data.split(",")[1];
-              
-              const safeFileName = file.name.replace(/[^a-zA-Z0-9\.\-_]/g, "_");
-              const path = `images/uploads/${Date.now()}_${safeFileName}`;
-              
-              await githubUploadFile(path, rawBase64, `Upload ${file.name} via CMS`);
+          const secureUrl = await uploadToCloudinary(
+            file,
+            settings.cloudinaryCloudName,
+            settings.cloudinaryPreset
+          );
 
-              const textarea = target.querySelector("#form-article-content");
-              const startPos = textarea.selectionStart;
-              const endPos = textarea.selectionEnd;
-              const text = textarea.value;
-              const imageMarkdown = `\n![${file.name}](${path})\n`;
+          const textarea = target.querySelector("#form-article-content");
+          const startPos = textarea.selectionStart;
+          const endPos = textarea.selectionEnd;
+          const text = textarea.value;
+          const imageMarkdown = `\n![${file.name}](${secureUrl})\n`;
 
-              textarea.value = text.substring(0, startPos) + imageMarkdown + text.substring(endPos);
-              textarea.focus();
-              const newCursorPos = startPos + imageMarkdown.length;
-              textarea.setSelectionRange(newCursorPos, newCursorPos);
-              
-              updatePreview();
-            } catch (err) {
-              console.error(err);
-              alert(`画像のアップロードに失敗しました: ${err.message}`);
-            } finally {
-              // Restore button label
-              imageUploadLabel.style.pointerEvents = "auto";
-              imageUploadLabel.innerHTML = `<i data-lucide="image" style="width:14px; height:14px;"></i> 画像を挿入 (GitHubへアップロード)`;
-              if (window.lucide) window.lucide.createIcons();
-              imageUploadInput.value = "";
-            }
-          };
-          reader.readAsDataURL(file);
+          textarea.value = text.substring(0, startPos) + imageMarkdown + text.substring(endPos);
+          textarea.focus();
+          const newCursorPos = startPos + imageMarkdown.length;
+          textarea.setSelectionRange(newCursorPos, newCursorPos);
+          
+          updatePreview();
         } catch (err) {
           console.error(err);
-          alert(`ファイルの読み込みに失敗しました: ${err.message}`);
+          alert(`画像のアップロードに失敗しました: ${err.message}`);
+        } finally {
+          // Restore button label
           imageUploadLabel.style.pointerEvents = "auto";
-          imageUploadLabel.innerHTML = `<i data-lucide="image" style="width:14px; height:14px;"></i> 画像を挿入 (GitHubへアップロード)`;
+          imageUploadLabel.innerHTML = `<i data-lucide="image" style="width:14px; height:14px;"></i> 画像を挿入 (Cloudinaryへアップロード)`;
           if (window.lucide) window.lucide.createIcons();
+          imageUploadInput.value = "";
         }
       });
     }
@@ -2174,15 +2361,36 @@ function renderCMSForm(target) {
   });
 }
 
+// --- CLOUDINARY UPLOAD UTILITY ---
+async function uploadToCloudinary(file, cloudName, uploadPreset) {
+  const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+
+  const res = await fetch(url, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errData = await res.json();
+    throw new Error(errData.error?.message || "画像のアップロードに失敗しました。");
+  }
+
+  const data = await res.json();
+  return data.secure_url;
+}
+
 // --- GITHUB API UTILITIES ---
 function utf8ToBase64(str) {
   return btoa(unescape(encodeURIComponent(str)));
 }
 
 async function githubUploadFile(path, contentBase64, message) {
-  const settings = JSON.parse(localStorage.getItem("togosen_github_settings") || "{}");
-  if (!settings.token || !settings.owner || !settings.repo) {
-    throw new Error("GitHubトークンまたはリポジトリ設定が未設定です。「GitHub 連携設定」画面で設定してください。");
+  const settings = getSystemSettings();
+  if (!settings.token) {
+    throw new Error("GitHubアクセストークンが未設定です。「GitHub & 画像ホスティング連携設定」画面で設定してください。");
   }
 
   const { token, owner, repo, branch = "main" } = settings;
@@ -2233,52 +2441,54 @@ async function githubUploadFile(path, contentBase64, message) {
   return responseData.content.path;
 }
 
-// GitHub Settings Tab UI
 function renderGitHubSettings(target) {
-  const settings = JSON.parse(localStorage.getItem("togosen_github_settings") || JSON.stringify({
-    token: "",
-    owner: "umi3link5-sudo",
-    repo: "togosen-univ.github.io",
-    branch: "main"
-  }));
+  const settings = getSystemSettings();
 
   target.innerHTML = `
     <div class="cms-content-header">
-      <h2 class="cms-content-title font-outfit">GitHub 連携設定</h2>
+      <h2 class="cms-content-title font-outfit">システム連携設定 & サイトの公開</h2>
     </div>
 
     <div id="github-sync-msg" class="github-sync-status" style="display:none;"></div>
 
-    <form id="github-settings-form" class="cms-form">
-      <div class="form-group">
-        <label for="gh-token">GitHub Personal Access Token (PAT)</label>
-        <input type="password" id="gh-token" class="form-control" value="${settings.token || ''}" placeholder="ghp_xxxxxxxxxxxxxxxxxxxx" required>
-        <div style="font-size: 0.75rem; color: var(--color-text-light); margin-top: 0.5rem;">
-          ※ リポジトリへの書き込み権限（Contents: Read & Write）を持つトークンを入力してください。トークンはブラウザの LocalStorage にのみ安全に保存されます。
-        </div>
+    <div class="cms-form">
+      <div style="margin-top: 1rem; padding-bottom: 1.5rem;">
+        <h3 class="font-outfit" style="font-size: 1.1rem; margin-bottom: 1rem; color: var(--color-primary); border-left: 3px solid var(--color-primary); padding-left: 0.5rem;">適用中の連携パラメータ（固定値）</h3>
+        <p style="font-size: 0.8rem; color: var(--color-text-sub); margin-bottom: 1.5rem;">
+          ※ セキュリティと簡便化のため、連携設定はすべてプログラム内で固定化されています。手動での設定やトークンの入力は不要です。
+        </p>
+        <table style="width: 100%; border-collapse: collapse; font-size: 0.85rem; color: var(--color-text-sub);">
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500; width: 40%;">GitHub アクセストークン (PAT)</td>
+            <td style="font-family: var(--font-mono); color: var(--color-success);">●●●●●●●●●●●●●●●●● (適用済み・自動管理)</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500;">GitHub 所有者 (Owner)</td>
+            <td style="font-family: var(--font-mono);">${settings.owner}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500;">GitHub リポジトリ名 (Repo)</td>
+            <td style="font-family: var(--font-mono);">${settings.repo}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500;">デプロイ先ブランチ</td>
+            <td style="font-family: var(--font-mono);">${settings.branch}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500;">Cloudinary Cloud Name</td>
+            <td style="font-family: var(--font-mono);">${settings.cloudinaryCloudName}</td>
+          </tr>
+          <tr style="border-bottom: 1px solid var(--color-border); height: 2.2rem;">
+            <td style="font-weight: 500;">Cloudinary Preset Name</td>
+            <td style="font-family: var(--font-mono);">${settings.cloudinaryPreset}</td>
+          </tr>
+        </table>
       </div>
 
-      <div class="cms-form-row">
-        <div class="form-group">
-          <label for="gh-owner">リポジトリ所有者 (Owner)</label>
-          <input type="text" id="gh-owner" class="form-control" value="${settings.owner || ''}" required>
-        </div>
-        <div class="form-group">
-          <label for="gh-repo">リポジトリ名 (Repo)</label>
-          <input type="text" id="gh-repo" class="form-control" value="${settings.repo || ''}" required>
-        </div>
-      </div>
-
-      <div class="form-group">
-        <label for="gh-branch">デプロイ先ブランチ (Branch)</label>
-        <input type="text" id="gh-branch" class="form-control" value="${settings.branch || 'main'}" required>
-      </div>
-
-      <div class="cms-form-buttons" style="margin-top: 2rem; display: flex; gap: 1rem;">
-        <button type="submit" class="btn-primary">設定を保存する</button>
+      <div class="cms-form-buttons" style="margin-top: 1rem; display: flex; gap: 1rem;">
         <button type="button" class="btn-secondary" onclick="location.hash='#home'">トップページへ戻る</button>
       </div>
-    </form>
+    </div>
 
     <div style="margin-top: 3rem; border-top: 1px solid var(--color-border); padding-top: 2rem;">
       <h3 class="font-outfit" style="margin-bottom: 1rem;">サイトの公開（GitHubへのデータ同期）</h3>
@@ -2290,27 +2500,6 @@ function renderGitHubSettings(target) {
       </button>
     </div>
   `;
-
-  // Hook setting save
-  const form = target.querySelector("#github-settings-form");
-  form.addEventListener("submit", (e) => {
-    e.preventDefault();
-    const token = target.querySelector("#gh-token").value.trim();
-    const owner = target.querySelector("#gh-owner").value.trim();
-    const repo = target.querySelector("#gh-repo").value.trim();
-    const branch = target.querySelector("#gh-branch").value.trim();
-
-    localStorage.setItem("togosen_github_settings", JSON.stringify({ token, owner, repo, branch }));
-    
-    const msg = target.querySelector("#github-sync-msg");
-    msg.className = "github-sync-status success";
-    msg.innerText = "設定を保存しました。";
-    msg.style.display = "block";
-    
-    setTimeout(() => {
-      msg.style.display = "none";
-    }, 3000);
-  });
 
   // Hook publish sync
   const publishBtn = target.querySelector("#github-sync-publish-btn");

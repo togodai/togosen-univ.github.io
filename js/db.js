@@ -11,7 +11,7 @@ const STORAGE_KEYS = {
 };
 
 // Default password for administrative actions
-const ADMIN_PASSWORD = "togosen";
+const ADMIN_PASSWORD = "LinGu";
 
 // Helper: load from localStorage or return default
 function loadData(key, defaultValue) {
