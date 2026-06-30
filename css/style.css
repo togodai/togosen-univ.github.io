@@ -2861,7 +2861,7 @@ li {
 }
 
 .hero-video.active {
-  opacity: 0.22 !important; /* 背景として文字の邪魔をしない絶妙な薄さ */
+  opacity: 0.7 !important; /* 背景動画をより鮮明に見せるために70%に引き上げ */
 }
 
 
