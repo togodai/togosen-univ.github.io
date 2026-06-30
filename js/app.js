@@ -1454,7 +1454,7 @@ function renderTournamentDetail(container, tournamentId) {
     container.innerHTML = `
       <style>
         .tm-page-bg {
-          background-color: #f5f2eb;
+          background-color: #edd9c0; /* Orange-leaning warm beige */
           min-height: 100vh;
           width: 100%;
           display: flex;
@@ -1464,27 +1464,37 @@ function renderTournamentDetail(container, tournamentId) {
           box-sizing: border-box;
           font-family: 'Inter', 'Noto Sans JP', sans-serif;
         }
-        /* Outer White Panel */
+        /* Outer White Panel (16:9 Aspect Ratio) */
         .tm-panel {
           background-color: #ffffff;
           border: 1px solid #d1c7bd;
-          box-shadow: 0 30px 80px rgba(56, 50, 46, 0.1);
-          width: 100%;
-          max-width: 1000px;
+          box-shadow: 0 30px 80px rgba(56, 50, 46, 0.12);
+          width: 80%; /* 80% of width */
+          max-width: 1200px;
+          aspect-ratio: 16 / 9; /* 16:9 ratio */
           border-radius: 2px;
           display: flex;
           flex-direction: column;
           position: relative;
           box-sizing: border-box;
+          overflow: hidden;
+        }
+        @media (max-width: 1024px) {
+          .tm-panel {
+            width: 90%;
+            aspect-ratio: auto;
+            min-height: auto;
+          }
         }
         /* Top half: Title area */
         .tm-panel-top {
-          padding: 3rem 4rem 2rem 4rem;
+          padding: 3.5rem 4rem 2rem 4rem;
           position: relative;
           display: flex;
           flex-direction: column;
           justify-content: center;
-          min-height: 180px;
+          height: 45%; /* Percentage of height to maintain ratio */
+          box-sizing: border-box;
         }
         /* Corner labels */
         .tm-corner-text-left-top {
@@ -1510,14 +1520,15 @@ function renderTournamentDetail(container, tournamentId) {
         /* Title animation styles */
         .tm-title-animated {
           font-family: 'Noto Sans JP', 'Outfit', sans-serif;
-          font-size: 3.5rem;
+          font-size: 4.8rem; /* Enlarged title */
           font-weight: 800;
-          line-height: 1.25;
+          line-height: 1.2;
           margin: 0;
           color: #38322e;
           word-break: break-all;
           display: flex;
           flex-wrap: wrap;
+          letter-spacing: -0.02em;
         }
         .tm-char-wrapper {
           display: inline-block;
@@ -1545,18 +1556,21 @@ function renderTournamentDetail(container, tournamentId) {
           }
           .tm-panel-top {
             padding: 2.5rem 2rem 1.5rem 2rem;
+            height: auto;
           }
         }
         /* Horizontal Orange Line with Speech Bubble Tail */
         .tm-orange-line-container {
-          position: relative;
-          width: calc(100% + 40px);
+          position: absolute;
+          top: 45%; /* Match the top panel height */
           left: -20px;
+          width: calc(100% + 40px);
           height: 16px;
           display: flex;
           align-items: center;
           z-index: 10;
           pointer-events: none;
+          transform: translateY(-50%);
         }
         .tm-line-left-segment {
           height: 2px;
@@ -1568,9 +1582,8 @@ function renderTournamentDetail(container, tournamentId) {
           width: 24px;
           height: 16px;
           display: flex;
-          align-items: center;
-          justify-content: center;
-          transform: translateY(2px);
+          align-items: flex-start; /* Align to top to connect perfectly */
+          margin-top: -1px; /* Micro adjustment to connect line */
         }
         .tm-line-right-segment {
           height: 2px;
@@ -1581,35 +1594,37 @@ function renderTournamentDetail(container, tournamentId) {
         .tm-panel-bottom {
           display: grid;
           grid-template-columns: 5.5fr 4.5fr;
+          height: 55%; /* Remaining height */
           box-sizing: border-box;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .tm-panel-bottom {
             grid-template-columns: 1fr;
+            height: auto;
           }
         }
         /* Left Column: Tabs, Contents, Entry */
         .tm-left-col {
-          padding: 2.5rem 3.5rem 3rem 4rem;
+          padding: 2rem 3.5rem 2rem 4rem;
           display: flex;
           flex-direction: column;
           border-right: 1px solid #e2ded5;
           box-sizing: border-box;
           position: relative;
-          min-height: 380px;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .tm-left-col {
             border-right: none;
             border-bottom: 1px solid #e2ded5;
             padding: 2rem 2rem 3rem 2rem;
+            min-height: 350px;
           }
         }
         /* Navigation Tabs */
         .tm-tabs-header {
           display: flex;
           gap: 2.5rem;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
           border-bottom: 1px solid #e2ded5;
           padding-bottom: 0.5rem;
         }
@@ -1645,16 +1660,15 @@ function renderTournamentDetail(container, tournamentId) {
         .tm-tab-body {
           flex-grow: 1;
           overflow-y: auto;
-          max-height: 200px;
           padding-right: 1rem;
-          margin-bottom: 2rem;
+          margin-bottom: 1.5rem;
         }
         /* Scrollbar styling */
         .tm-tab-body::-webkit-scrollbar {
           width: 4px;
         }
         .tm-tab-body::-webkit-scrollbar-track {
-          background: #fcfbfa;
+          background: #ffffff;
         }
         .tm-tab-body::-webkit-scrollbar-thumb {
           background: #d1c7bd;
@@ -1668,15 +1682,15 @@ function renderTournamentDetail(container, tournamentId) {
         }
         /* Right Column: Key Visual */
         .tm-right-col {
-          padding: 2.5rem 4rem 3rem 3.5rem;
+          padding: 0 4rem 2rem 3.5rem; /* Set top padding to 0 for flush fitting */
           display: flex;
           flex-direction: column;
-          justify-content: center;
+          justify-content: flex-start;
           box-sizing: border-box;
         }
-        @media (max-width: 900px) {
+        @media (max-width: 1024px) {
           .tm-right-col {
-            padding: 3rem 2rem;
+            padding: 2rem;
           }
         }
         /* Key Visual Card */
@@ -1684,15 +1698,18 @@ function renderTournamentDetail(container, tournamentId) {
           width: 100%;
           display: flex;
           flex-direction: column;
+          height: 100%;
         }
         .tm-kv-frame {
           border: 1px solid #d1c7bd;
+          border-top: none; /* Make it seamlessly touch the orange line */
           aspect-ratio: 16/9;
           overflow: hidden;
           background-color: #e8e4db;
           display: flex;
           justify-content: center;
           align-items: center;
+          width: 100%;
         }
         .tm-kv-img {
           width: 100%;
@@ -1711,7 +1728,7 @@ function renderTournamentDetail(container, tournamentId) {
         .tm-kv-footer {
           display: flex;
           justify-content: space-between;
-          margin-top: 0.75rem;
+          margin-top: 0.5rem;
           font-family: 'Outfit', sans-serif;
           font-size: 0.65rem;
           font-weight: 600;
@@ -1886,7 +1903,7 @@ function renderTournamentDetail(container, tournamentId) {
             <div class="tm-line-left-segment"></div>
             <div class="tm-line-v-tail">
               <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
-                <path d="M0 2 L10 2 L12 12 L14 2 L24 2" stroke="#ff6600" stroke-width="2" fill="none"/>
+                <path d="M0 1 L10 1 L12 11 L14 1 L24 1" stroke="#ff6600" stroke-width="2" fill="none"/>
               </svg>
             </div>
             <div class="tm-line-right-segment"></div>
@@ -1905,19 +1922,10 @@ function renderTournamentDetail(container, tournamentId) {
 
               <!-- Tab Contents -->
               <div class="tm-tab-body">
-                <!-- Tab 1: ABOUT -->
+                <!-- Tab 1: ABOUT (Schedule only) -->
                 <div class="tm-tab-content active" id="tm-tab-content-about">
                   <div class="tm-markdown">
-                    <p>${isEn ? `Welcome to the official archive for "${titleText}". Complete details, regulations, and tournament records are preserved here.` : `本ページは「${titleText}」の特設公式アーカイブです。大会概要、ルール、および対戦記録が保管されています。`}</p>
-                    <h3 style="margin-top: 1.5rem;">${isEn ? "SCHEDULE" : "開催スケジュール"}</h3>
                     ${timelineHtml}
-                    
-                    ${hasParticipants ? `
-                      <h3 style="margin-top: 1.5rem;">${isEn ? "REGISTERED MEMBERS" : "エントリーメンバー"}</h3>
-                      <div style="margin-top: 0.75rem;">
-                        ${t.participants.map(p => `<span class="tm-member-tag"><i data-lucide="user" style="width:11px; height:11px; display:inline-block; vertical-align:middle; margin-right:0.25rem; color:#ff6600;"></i> ${p}</span>`).join("")}
-                      </div>
-                    ` : ""}
                   </div>
                 </div>
 
