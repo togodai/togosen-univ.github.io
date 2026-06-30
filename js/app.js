@@ -309,6 +309,16 @@ function handleRouting() {
     window.lucide.createIcons();
   }
 
+  // Toggle transparent header for home hero video
+  const header = document.querySelector(".app-header");
+  if (header) {
+    if (hash === "#home") {
+      header.classList.add("transparent-header");
+    } else {
+      header.classList.remove("transparent-header");
+    }
+  }
+
   // Scroll to top
   window.scrollTo(0, 0);
 

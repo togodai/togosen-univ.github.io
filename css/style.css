@@ -2864,5 +2864,26 @@ li {
   opacity: 0.7 !important; /* 背景動画をより鮮明に見せるために70%に引き上げ */
 }
 
+/* --- Transparent Header for Home Video Background --- */
+.app-header {
+  transition: background-color 0.3s ease, border-color 0.3s ease;
+}
+
+.app-header.transparent-header {
+  background-color: transparent !important;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.05) !important;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 100;
+}
+
+/* 透過ヘッダー時に動画を最上部（ヘッダー背面）まで引き上げる */
+.app-header.transparent-header + .app-main .hero {
+  padding-top: calc(70px + 4rem) !important; /* ヘッダー高(70px)分余白を確保 */
+  min-height: 100vh !important; /* 画面全体の高さに広げる */
+}
+
 
 
