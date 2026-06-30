@@ -640,9 +640,13 @@ function renderHome(container) {
               <div class="is-card-image-wrap">
                 <img src="${s.image}" alt="${s.title}" class="is-card-img ${s.id}">
               </div>
-              <div class="is-card-body-wrap" style="display: flex; flex-direction: row; justify-content: flex-end; align-items: center; gap: 0.8rem; padding: 1.5rem 2rem; white-space: nowrap;">
-                <div class="is-card-num font-outfit" style="font-size: 1.2rem; font-weight: 800; color: var(--color-text-light); letter-spacing: 0.02em;">${s.num}</div>
-                <div class="is-card-go font-outfit" style="font-size: 0.9rem; font-weight: 700; color: var(--color-accent); letter-spacing: 0.05em;">ENTER &rarr;</div>
+              <div class="is-card-body-wrap">
+                <div class="is-card-num font-outfit">${s.num}</div>
+                <h3 class="is-card-title">${s.title}</h3>
+                <div class="is-card-action-group font-outfit">
+                  <span class="is-card-view-text">VIEW ARCHIVES</span>
+                  <span class="is-card-go">ENTER &rarr;</span>
+                </div>
               </div>
             </a>
           `).join("")}

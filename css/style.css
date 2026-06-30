@@ -2787,6 +2787,67 @@ li {
   container-type: inline-size;
 }
 
+/* Default (Wide screen / Mobile vertical layout): Full display */
+.is-card-body-wrap {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 1.5rem 2rem;
+  flex: 1;
+}
+.is-card-num {
+  font-size: 1rem;
+  color: var(--color-text-light);
+  margin-bottom: 0.25rem;
+}
+.is-card-title {
+  font-size: 1.25rem;
+  font-weight: 800;
+  color: var(--color-text);
+  margin-bottom: 0.75rem;
+  white-space: nowrap; /* Prevent title wrapping */
+}
+.is-card-action-group {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+.is-card-view-text {
+  color: var(--color-text-light);
+}
+.is-card-go {
+  color: var(--color-accent);
+}
+
+/* Threshold 1: When card width is 480px or less (Title would wrap) */
+/* Hide Japanese Title and "VIEW ARCHIVES", display only "IS#x" and "ENTER ->" in one row (right-aligned) */
+@container (max-width: 480px) {
+  .is-card-body-wrap {
+    flex-direction: row !important;
+    justify-content: flex-end !important;
+    align-items: center !important;
+    gap: 0.8rem !important;
+  }
+  .is-card-title {
+    display: none !important;
+  }
+  .is-card-view-text {
+    display: none !important;
+  }
+  .is-card-num {
+    font-size: 1.2rem !important;
+    font-weight: 800 !important;
+    margin-bottom: 0 !important;
+  }
+  .is-card-go {
+    font-size: 0.9rem !important;
+  }
+}
+
+/* Threshold 2: When card width is 260px or less */
+/* Hide the entire text block (display only image) */
 @container (max-width: 260px) {
   .is-card-body-wrap {
     display: none !important;
