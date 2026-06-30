@@ -34,6 +34,26 @@ function getYouTubeEmbedUrl(url) {
   return videoId ? `https://www.youtube.com/embed/${videoId}` : url;
 }
 
+// Cloudinary Image Upload Utility
+async function uploadToCloudinary(file, cloudName, uploadPreset) {
+  const formData = new FormData();
+  formData.append("file", file);
+  formData.append("upload_preset", uploadPreset);
+
+  const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {
+    method: "POST",
+    body: formData
+  });
+
+  if (!res.ok) {
+    const errorData = await res.json();
+    throw new Error(errorData.error?.message || "画像のアップロードに失敗しました。");
+  }
+
+  const data = await res.json();
+  return data.secure_url;
+}
+
 // Initialize the Database
 if (window.location.search.includes("reset=true")) {
   console.log("Forced database reset via URL parameter.");
@@ -421,9 +441,9 @@ function getFilteredArticles() {
 
 // Get the latest overall update date from all data
 function getLatestUpdateDate() {
-  const articles = getFilteredArticles();
+  const articles = getFilteredArticles().filter(a => a.status !== "draft" || isAdminLoggedIn());
   const videos = getVideos();
-  const tournaments = getTournaments();
+  const tournaments = getTournaments().filter(t => t.status !== "draft" || isAdminLoggedIn());
 
   const dates = [];
   articles.forEach(a => dates.push(new Date(a.updatedAt || a.createdAt)));
@@ -437,9 +457,9 @@ function getLatestUpdateDate() {
 
 // --- RENDERING HOME ---
 function renderHome(container) {
-  const articles = getFilteredArticles();
+  const articles = getFilteredArticles().filter(a => a.status !== "draft" || isAdminLoggedIn());
   const videos = getVideos();
-  const tournaments = getTournaments();
+  const tournaments = getTournaments().filter(t => t.status !== "draft" || isAdminLoggedIn());
   const seriesList = getSeries();
 
   const latestUpdateStr = getLatestUpdateDate();
@@ -639,7 +659,7 @@ function renderHome(container) {
   const tournamentListContainer = container.querySelector("#home-tournament-list");
   if (tournamentListContainer) {
     const renderHomeTournamentList = (statusFilter) => {
-      const allTournaments = getTournaments();
+      const allTournaments = getTournaments().filter(t => t.status !== "draft" || isAdminLoggedIn());
       const filtered = statusFilter === "all" 
         ? allTournaments 
         : allTournaments.filter(t => t.status === statusFilter);
@@ -652,21 +672,28 @@ function renderHome(container) {
       tournamentListContainer.innerHTML = filtered.map(t => {
         const series = getSeriesById(t.seriesId);
         return `
-          <div class="tournament-status-card" style="border:1px solid var(--color-border); padding:1.5rem; background-color:var(--color-bg); display:flex; flex-direction:column; justify-content:space-between; height:180px;">
-            <div>
-              <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.75rem;">
-                <span class="tournament-status-badge ${t.status}" style="font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem; text-transform:uppercase;">
-                  ${t.status === "upcoming" ? "開催予定" : "開催終了"}
-                </span>
-                <span style="font-size:0.75rem; color:var(--color-text-light); font-weight:600; font-family:var(--font-outfit);">${series ? series.title : "共通"}</span>
+          <div class="tournament-status-card" style="border:1px solid var(--color-border); background-color:var(--color-bg); display:flex; flex-direction:column; justify-content:space-between; height:auto; min-height:180px; overflow:hidden; border-radius:6px;">
+            ${t.image ? `
+              <div style="width:100%; height:120px; overflow:hidden; border-bottom:1px solid var(--color-border);">
+                <img src="${t.image}" alt="" style="width:100%; height:100%; object-fit:cover;">
               </div>
-              <h3 style="font-size:1.05rem; font-weight:700; line-height:1.3; margin-bottom:0.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${t.title}</h3>
-            </div>
-            <div>
-              <div style="font-size:0.8rem; color:var(--color-text-sub); display:flex; flex-direction:column; gap:0.25rem; margin-bottom:1rem;">
-                <span><i data-lucide="calendar" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:0.25rem;"></i> 開催日: ${t.date}</span>
+            ` : ""}
+            <div style="padding:1.25rem; display:flex; flex-direction:column; justify-content:space-between; flex-grow:1; gap:1rem;">
+              <div>
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:0.5rem;">
+                  <span class="tournament-status-badge ${t.status}" style="font-size:0.7rem; font-weight:700; padding:0.15rem 0.5rem; text-transform:uppercase;">
+                    ${t.status === "draft" ? "下書き" : (t.status === "upcoming" ? "開催予定" : "開催終了")}
+                  </span>
+                  <span style="font-size:0.75rem; color:var(--color-text-light); font-weight:600; font-family:var(--font-outfit);">${series ? series.title : "共通"}</span>
+                </div>
+                <h3 style="font-size:1.05rem; font-weight:700; line-height:1.3; margin-bottom:0.5rem; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;">${t.title}</h3>
               </div>
-              <a href="#tournament" class="btn-primary" style="display:block; text-align:center; font-size:0.8rem; padding:0.4rem; font-weight:700;">詳細・結果を見る</a>
+              <div>
+                <div style="font-size:0.8rem; color:var(--color-text-sub); display:flex; flex-direction:column; gap:0.25rem; margin-bottom:0.75rem;">
+                  <span><i data-lucide="calendar" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:0.25rem;"></i> 開催日: ${t.date}</span>
+                </div>
+                <a href="#tournament/${t.id}" class="btn-primary" style="display:block; text-align:center; font-size:0.8rem; padding:0.4rem; font-weight:700;">詳細・結果を見る</a>
+              </div>
             </div>
           </div>
         `;
@@ -813,7 +840,7 @@ function renderSeries(container, seriesId, initialTab = "overview") {
   // Filter content for this series
   const articles = getFilteredArticles().filter(a => a.seriesId === seriesId);
   const videos = getVideos().filter(v => v.seriesId === seriesId);
-  const tournaments = getTournaments().filter(t => t.seriesId === seriesId);
+  const tournaments = getTournaments().filter(t => t.seriesId === seriesId && (t.status !== "draft" || isAdminLoggedIn()));
 
   // Gather update history dynamically from articles in this series
   const historyList = [];
@@ -968,12 +995,12 @@ function renderSeries(container, seriesId, initialTab = "overview") {
                 <div class="article-card-content">
                   <div class="article-card-meta">
                     <span class="tournament-status-badge ${t.status}">
-                      ${t.status === "upcoming" ? "開催予定" : "開催結果"}
+                      ${t.status === "draft" ? "下書き" : (t.status === "upcoming" ? "開催予定" : "開催結果")}
                     </span>
                     <span>開催日: ${t.date}</span>
                   </div>
                   <h3 class="article-card-title">
-                    <a href="#tournament">${t.title}</a>
+                    <a href="#tournament/${t.id}">${t.title}</a>
                   </h3>
                   <p class="article-card-excerpt">
                     参加人数: ${t.participants.length}名 // レギュレーションと結果はこちらの大会特設アーカイブをご確認ください。
@@ -1298,7 +1325,7 @@ function renderArticleDetail(container, articleId) {
 
 // --- RENDERING TOURNAMENTS PAGE ---
 function renderTournamentPage(container) {
-  const tournaments = getTournaments();
+  const tournaments = getTournaments().filter(t => t.status !== "draft" || isAdminLoggedIn());
 
   container.innerHTML = `
     <div class="container">
@@ -1313,26 +1340,33 @@ function renderTournamentPage(container) {
         ${tournaments.map(t => {
           const series = getSeriesById(t.seriesId);
           return `
-            <div class="tournament-status-card" style="border: 1px solid var(--color-border); padding: 1.5rem; background-color: var(--color-bg); display: flex; flex-direction: column; justify-content: space-between; min-height: 200px;">
-              <div>
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
-                  <span class="tournament-status-badge ${t.status}" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; text-transform: uppercase; margin-bottom: 0;">
-                    ${t.status === "upcoming" ? "開催予定" : "開催終了"}
-                  </span>
-                  <span style="font-size: 0.75rem; color: var(--color-text-light); font-weight: 600; font-family: var(--font-outfit);">
-                    ${series ? series.title : "共通"}
-                  </span>
+            <div class="tournament-status-card" style="border: 1px solid var(--color-border); background-color: var(--color-bg); display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; overflow: hidden; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;">
+              ${t.image ? `
+                <div style="width: 100%; height: 180px; overflow: hidden; border-bottom: 1px solid var(--color-border);">
+                  <img src="${t.image}" alt="" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
                 </div>
-                <h3 style="font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.5rem;">${t.title}</h3>
-              </div>
-              <div>
-                <div style="font-size: 0.8rem; color: var(--color-text-sub); display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem;">
-                  <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 開催日: ${t.date}</span>
-                  <span><i data-lucide="users" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 登録メンバー: ${t.participants.length}名</span>
+              ` : ""}
+              <div style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span class="tournament-status-badge ${t.status}" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; text-transform: uppercase; margin-bottom: 0;">
+                      ${t.status === "draft" ? "下書き" : (t.status === "upcoming" ? "開催予定" : "開催終了")}
+                    </span>
+                    <span style="font-size: 0.75rem; color: var(--color-text-light); font-weight: 600; font-family: var(--font-outfit);">
+                      ${series ? series.title : "共通"}
+                    </span>
+                  </div>
+                  <h3 style="font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.5rem;">${t.title}</h3>
                 </div>
-                <a href="#tournament/${t.id}" class="btn-primary" style="display: block; text-align: center; font-size: 0.85rem; padding: 0.5rem; font-weight: 700;">
-                  特設アーカイブへ ENTER &rarr;
-                </a>
+                <div style="margin-top: 1.5rem;">
+                  <div style="font-size: 0.8rem; color: var(--color-text-sub); display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem;">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 開催日: ${t.date}</span>
+                    <span><i data-lucide="users" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 登録メンバー: ${t.participants.length}名</span>
+                  </div>
+                  <a href="#tournament/${t.id}" class="btn-primary" style="display: block; text-align: center; font-size: 0.85rem; padding: 0.5rem; font-weight: 700;">
+                    特設アーカイブへ ENTER &rarr;
+                  </a>
+                </div>
               </div>
             </div>
           `;
@@ -1349,7 +1383,7 @@ function renderTournamentDetail(container, tournamentId) {
   const tournaments = getTournaments();
   const t = tournaments.find(x => x.id === tournamentId);
   
-  if (!t) {
+  if (!t || (t.status === "draft" && !isAdminLoggedIn())) {
     container.innerHTML = `
       <div class="container text-center" style="padding: 5rem 0;">
         <h2 class="font-outfit">指定された大会情報が見つかりません。</h2>
@@ -1427,10 +1461,35 @@ function renderTournamentDetail(container, tournamentId) {
           </div>
         </div>
 
+        ${t.status === "draft" ? `
+          <div class="draft-preview-banner" style="background-color: var(--color-accent); color: var(--color-bg); padding: 0.75rem 1.5rem; margin-bottom: 2rem; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 4px;">
+            <i data-lucide="eye-off" style="width:16px; height:16px;"></i>
+            ${isEn ? "ADMIN PREVIEW: This tournament is currently in DRAFT status." : "管理者用プレビュー：この大会情報は現在「下書き」状態です。一般ユーザーには公開されていません。"}
+          </div>
+        ` : ""}
+
+        ${t.image ? `
+          <div class="tournament-key-visual" style="width: 100%; max-height: 450px; aspect-ratio: 16/9; overflow: hidden; border: 1px solid var(--color-border); margin-bottom: 2.5rem; background-color: #000; display: flex; justify-content: center; align-items: center; border-radius: 4px;">
+            <img src="${t.image}" alt="${titleText} キービジュアル" style="width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.08); animation: kvReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          </div>
+          <style>
+            @keyframes kvReveal {
+              from {
+                opacity: 0;
+                transform: scale(1.08);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+          </style>
+        ` : ""}
+
         <div class="series-hero" style="background-color: var(--color-bg-sub); border: 1px solid var(--color-border); padding: 2rem 3rem; margin-bottom: 2.5rem;">
           <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:0.75rem;">
             <span class="tournament-status-badge ${t.status}" style="margin-bottom:0;">
-              ${t.status === "upcoming" ? (isEn ? "UPCOMING / ENTRY OPEN" : "開催予定 / エントリー受付中") : (isEn ? "COMPLETED / ARCHIVED" : "開催終了 / アーカイブ保管済")}
+              ${t.status === "draft" ? (isEn ? "DRAFT / ADMIN ONLY" : "下書き / 管理者限定") : (t.status === "upcoming" ? (isEn ? "UPCOMING / ENTRY OPEN" : "開催予定 / エントリー受付中") : (isEn ? "COMPLETED / ARCHIVED" : "開催終了 / アーカイブ保管済"))}
             </span>
             <span style="font-size:0.85rem; color:var(--color-text-light); font-weight:600; font-family:var(--font-outfit);">
               ${series ? series.title : "共通"}
@@ -1829,7 +1888,7 @@ function renderCMSList(target) {
                   <td><strong>${t.title}</strong></td>
                   <td>${series ? series.title : "共通"}</td>
                   <td>${t.date}</td>
-                  <td><span class="cms-badge ${t.status}">${t.status === "upcoming" ? "予定" : "終了"}</span></td>
+                  <td><span class="cms-badge ${t.status}">${t.status === "draft" ? "下書き" : (t.status === "upcoming" ? "予定" : "終了")}</span></td>
                   <td class="cms-actions">
                     <button class="cms-action-btn edit" data-id="${t.id}"><i data-lucide="edit-3" style="width:14px;"></i> 編集</button>
                     <button class="cms-action-btn delete" data-id="${t.id}"><i data-lucide="trash-2" style="width:14px;"></i> 削除</button>
@@ -1844,7 +1903,7 @@ function renderCMSList(target) {
 
     // Hook Handlers
     target.querySelector("#cms-create-new-btn").addEventListener("click", () => {
-      cmsEditingItem = { id: "", title: "", status: "upcoming", date: new Date().toISOString().split("T")[0], seriesId: "sami", rules: "", participants: [], results: "", archiveUrl: "" };
+      cmsEditingItem = { id: "", title: "", status: "draft", date: new Date().toISOString().split("T")[0], seriesId: "sami", rules: "", participants: [], results: "", archiveUrl: "", image: "" };
       renderCMSDashboard(document.getElementById("app"));
     });
 
@@ -2263,6 +2322,7 @@ function renderCMSForm(target) {
               <div class="form-group">
                 <label for="form-tournament-status">ステータス</label>
                 <select id="form-tournament-status" class="form-control" required>
+                  <option value="draft" ${cmsEditingItem.status === "draft" ? "selected" : ""}>下書き</option>
                   <option value="upcoming" ${cmsEditingItem.status === "upcoming" ? "selected" : ""}>予定</option>
                   <option value="completed" ${cmsEditingItem.status === "completed" ? "selected" : ""}>終了</option>
                 </select>
@@ -2278,6 +2338,19 @@ function renderCMSForm(target) {
                 <label for="form-tournament-archive">配信アーカイブYouTube URL (任意)</label>
                 <input type="url" id="form-tournament-archive" class="form-control" value="${cmsEditingItem.archiveUrl || ""}" placeholder="https://www.youtube.com/embed/xxxxxx">
               </div>
+            </div>
+
+            <div class="form-group">
+              <label for="form-tournament-image" style="display:flex; justify-content:space-between; align-items:center;">
+                <span>大会のキービジュアル (任意、推奨サイズ: 1280×720)</span>
+                <span class="image-uploader-wrapper">
+                  <label for="form-tournament-image-upload" id="form-tournament-image-upload-label" class="btn-primary" style="font-size:0.75rem; padding:0.25rem 0.75rem; cursor:pointer; display:inline-flex; align-items:center; gap:0.25rem;">
+                    <i data-lucide="image" style="width:14px; height:14px;"></i> 画像をアップロード (Cloudinary)
+                  </label>
+                  <input type="file" id="form-tournament-image-upload" accept="image/*" style="display:none;">
+                </span>
+              </label>
+              <input type="text" id="form-tournament-image" class="form-control" value="${cmsEditingItem.image || ""}" placeholder="https://res.cloudinary.com/... または画像のURLを入力">
             </div>
 
             <div class="form-group">
@@ -2408,6 +2481,50 @@ function renderCMSForm(target) {
       });
     }
 
+    // Hook Tournament Image Upload (Cloudinary Integration)
+    const imageUploadInput = target.querySelector("#form-tournament-image-upload");
+    const imageUploadLabel = target.querySelector("#form-tournament-image-upload-label");
+    const imageInput = target.querySelector("#form-tournament-image");
+    
+    if (imageUploadInput) {
+      imageUploadInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+          alert("画像ファイルを選択してください。");
+          return;
+        }
+
+        const settings = getSystemSettings();
+        try {
+          // Show upload loading spinner
+          imageUploadLabel.style.pointerEvents = "none";
+          imageUploadLabel.innerHTML = `<span class="image-upload-spinner"></span> アップロード中...`;
+
+          const secureUrl = await uploadToCloudinary(
+            file,
+            settings.cloudinaryCloudName,
+            settings.cloudinaryPreset
+          );
+
+          if (imageInput) {
+            imageInput.value = secureUrl;
+          }
+          alert("画像のアップロードが完了しました。");
+        } catch (err) {
+          console.error(err);
+          alert(`画像のアップロードに失敗しました: ${err.message}`);
+        } finally {
+          // Restore button label
+          imageUploadLabel.style.pointerEvents = "auto";
+          imageUploadLabel.innerHTML = `<i data-lucide="image" style="width:14px; height:14px;"></i> 画像をアップロード (Cloudinary)`;
+          if (window.lucide) window.lucide.createIcons();
+          imageUploadInput.value = "";
+        }
+      });
+    }
+
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       
@@ -2427,7 +2544,8 @@ function renderCMSForm(target) {
         rules: rulesJaText.value.trim(),
         rules_en: rulesEnText.value.trim(),
         results: resultsJaText.value.trim(),
-        results_en: resultsEnText.value.trim()
+        results_en: resultsEnText.value.trim(),
+        image: imageInput.value.trim()
       };
 
       saveTournament(payload);
