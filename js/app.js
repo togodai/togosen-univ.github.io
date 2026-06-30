@@ -261,27 +261,6 @@ function handleRouting() {
     return;
   }
   
-  // Toggle header/footer visibility for tournament detail page (independent minimal LP)
-  const header = document.querySelector(".app-header");
-  const footer = document.querySelector(".app-footer");
-  const mainEl = document.querySelector(".app-main");
-  
-  if (hash.startsWith("#tournament/")) {
-    if (header) header.style.display = "none";
-    if (footer) footer.style.display = "none";
-    if (mainEl) {
-      mainEl.style.padding = "0";
-      mainEl.style.marginTop = "0";
-    }
-  } else {
-    if (header) header.style.display = "";
-    if (footer) footer.style.display = "";
-    if (mainEl) {
-      mainEl.style.padding = "";
-      mainEl.style.marginTop = "";
-    }
-  }
-
   // Route matching
   if (hash === "#home") {
     console.log("Routing to home");
@@ -1415,6 +1394,7 @@ function renderTournamentDetail(container, tournamentId) {
   }
 
   const series = getSeriesById(t.seriesId);
+  
   const hasResults = (t.results && t.results.trim()) || (t.results_en && t.results_en.trim());
   const hasParticipants = t.participants && t.participants.length > 0;
 
@@ -1424,561 +1404,162 @@ function renderTournamentDetail(container, tournamentId) {
     const rulesHtml = renderMarkdown(isEn ? (t.rules_en || t.rules) : t.rules);
     const resultsHtml = renderMarkdown(isEn ? (t.results_en || t.results) : t.results);
 
-    // Split title into animated characters
-    const titleChars = Array.from(titleText);
-    const animatedTitleHtml = titleChars.map((char, index) => {
-      if (char === " ") return `<span class="tm-char-space">&nbsp;</span>`;
-      // Delay increments slightly for each character to create sequential animation
-      const delay = 0.05 + index * 0.03;
-      return `<span class="tm-char-wrapper"><span class="tm-char" style="animation-delay: ${delay}s">${char}</span></span>`;
-    }).join("");
+    // Tab buttons HTML
+    let tabsHtml = `
+      <button class="tab-btn active" data-tab="overview">${isEn ? "Overview" : "概要"}</button>
+      <button class="tab-btn" data-tab="rules">${isEn ? "Regulation" : "レギュレーション"}</button>
+    `;
+    if (hasResults) {
+      tabsHtml += `<button class="tab-btn" data-tab="results">${isEn ? "Results" : "対戦結果"}</button>`;
+    }
+    if (hasParticipants) {
+      tabsHtml += `<button class="tab-btn" data-tab="participants">${isEn ? "Members" : "参加登録メンバー"}</button>`;
+    }
 
-    // Setup schedule timeline HTML
-    const timelineHtml = `
-      <div class="tm-timeline-mini">
-        <div class="tm-timeline-mini-item">
-          <span class="tm-timeline-mini-date">PHASE 01 // ENTRY</span>
-          <span class="tm-timeline-mini-title">${isEn ? "Registration Open" : "エントリー開始"}</span>
-        </div>
-        <div class="tm-timeline-mini-item">
-          <span class="tm-timeline-mini-date">PHASE 02 // MATCH DAY</span>
-          <span class="tm-timeline-mini-title">開催日: ${t.date}</span>
-        </div>
-        <div class="tm-timeline-mini-item">
-          <span class="tm-timeline-mini-date">PHASE 03 // ARCHIVE</span>
-          <span class="tm-timeline-mini-title">${isEn ? "Results Release" : "公式記録公開"}</span>
+    // Results Panel HTML
+    const resultsPanelHtml = hasResults ? `
+      <div class="tab-content" id="tab-detail-results">
+        <div class="markdown-body">
+          <h3 class="font-outfit" style="margin-top:0;">${isEn ? "Tournament Results" : "対戦結果"}</h3>
+          <div style="margin-top: 1.5rem;">
+            ${resultsHtml}
+          </div>
         </div>
       </div>
-    `;
+    ` : "";
+
+    // Participants Panel HTML
+    let participantsListHtml = "";
+    if (hasParticipants) {
+      participantsListHtml = t.participants.map(p => `<li><i data-lucide="user" style="width:14px; height:14px; color:var(--color-accent); display:inline-block; vertical-align:middle; margin-right:0.25rem;"></i> ${p}</li>`).join("");
+    }
+    const participantsPanelHtml = hasParticipants ? `
+      <div class="tab-content" id="tab-detail-participants">
+        <div class="tournament-participants-list" style="width: 100%; max-width: 600px;">
+          <h3 class="font-outfit" style="margin-top:0;">${isEn ? "Registered Members" : "登録メンバー一覧"} (${t.participants.length}名)</h3>
+          <ul>
+            ${participantsListHtml}
+          </ul>
+        </div>
+      </div>
+    ` : "";
 
     container.innerHTML = `
-      <style>
-        .tm-page-bg {
-          background-color: #edd9c0; /* Orange-leaning warm beige */
-          min-height: 100vh;
-          width: 100%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          padding: 4rem 2rem;
-          box-sizing: border-box;
-          font-family: 'Inter', 'Noto Sans JP', sans-serif;
-        }
-        /* Outer White Panel (16:9 Aspect Ratio) */
-        .tm-panel {
-          background-color: #ffffff;
-          border: 1px solid #d1c7bd;
-          box-shadow: 0 30px 80px rgba(56, 50, 46, 0.12);
-          width: 80%; /* 80% of width */
-          max-width: 1200px;
-          aspect-ratio: 16 / 9; /* 16:9 ratio */
-          border-radius: 2px;
-          display: flex;
-          flex-direction: column;
-          position: relative;
-          box-sizing: border-box;
-          overflow: hidden;
-        }
-        @media (max-width: 1024px) {
-          .tm-panel {
-            width: 90%;
-            aspect-ratio: auto;
-            min-height: auto;
-          }
-        }
-        /* Top half: Title area */
-        .tm-panel-top {
-          padding: 3.5rem 4rem 2rem 4rem;
-          position: relative;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          height: 45%; /* Percentage of height to maintain ratio */
-          box-sizing: border-box;
-        }
-        /* Corner labels */
-        .tm-corner-text-left-top {
-          position: absolute;
-          left: 1.5rem;
-          top: 1.5rem;
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          color: #a89f95;
-        }
-        .tm-corner-text-right-top {
-          position: absolute;
-          right: 1.5rem;
-          top: 1.5rem;
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          color: #a89f95;
-        }
-        /* Title animation styles */
-        .tm-title-animated {
-          font-family: 'Noto Sans JP', 'Outfit', sans-serif;
-          font-size: 4.8rem; /* Enlarged title */
-          font-weight: 800;
-          line-height: 1.2;
-          margin: 0;
-          color: #38322e;
-          word-break: break-all;
-          display: flex;
-          flex-wrap: wrap;
-          letter-spacing: -0.02em;
-        }
-        .tm-char-wrapper {
-          display: inline-block;
-          overflow: hidden;
-          vertical-align: bottom;
-          height: 1.3em;
-        }
-        .tm-char {
-          display: inline-block;
-          transform: translateY(100%);
-          animation: charReveal 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        .tm-char-space {
-          display: inline-block;
-          width: 0.25em;
-        }
-        @keyframes charReveal {
-          to {
-            transform: translateY(0);
-          }
-        }
-        @media (max-width: 768px) {
-          .tm-title-animated {
-            font-size: 2.2rem;
-          }
-          .tm-panel-top {
-            padding: 2.5rem 2rem 1.5rem 2rem;
-            height: auto;
-          }
-        }
-        /* Horizontal Orange Line with Speech Bubble Tail */
-        .tm-orange-line-container {
-          position: absolute;
-          top: 45%; /* Match the top panel height */
-          left: -20px;
-          width: calc(100% + 40px);
-          height: 16px;
-          display: flex;
-          align-items: center;
-          z-index: 10;
-          pointer-events: none;
-          transform: translateY(-50%);
-        }
-        .tm-line-left-segment {
-          height: 2px;
-          background-color: #ff6600;
-          width: 44%;
-        }
-        .tm-line-v-tail {
-          flex-shrink: 0;
-          width: 24px;
-          height: 16px;
-          display: flex;
-          align-items: flex-start; /* Align to top to connect perfectly */
-          margin-top: -1px; /* Micro adjustment to connect line */
-        }
-        .tm-line-right-segment {
-          height: 2px;
-          background-color: #ff6600;
-          flex-grow: 1;
-        }
-        /* Bottom half: 2 columns */
-        .tm-panel-bottom {
-          display: grid;
-          grid-template-columns: 5.5fr 4.5fr;
-          height: 55%; /* Remaining height */
-          box-sizing: border-box;
-        }
-        @media (max-width: 1024px) {
-          .tm-panel-bottom {
-            grid-template-columns: 1fr;
-            height: auto;
-          }
-        }
-        /* Left Column: Tabs, Contents, Entry */
-        .tm-left-col {
-          padding: 2rem 3.5rem 2rem 4rem;
-          display: flex;
-          flex-direction: column;
-          border-right: 1px solid #e2ded5;
-          box-sizing: border-box;
-          position: relative;
-        }
-        @media (max-width: 1024px) {
-          .tm-left-col {
-            border-right: none;
-            border-bottom: 1px solid #e2ded5;
-            padding: 2rem 2rem 3rem 2rem;
-            min-height: 350px;
-          }
-        }
-        /* Navigation Tabs */
-        .tm-tabs-header {
-          display: flex;
-          gap: 2.5rem;
-          margin-bottom: 1.5rem;
-          border-bottom: 1px solid #e2ded5;
-          padding-bottom: 0.5rem;
-        }
-        .tm-tab-btn {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.25em;
-          color: #a89f95;
-          background: none;
-          border: none;
-          cursor: pointer;
-          padding: 0 0 0.5rem 0;
-          position: relative;
-          transition: color 0.2s ease;
-        }
-        .tm-tab-btn:hover {
-          color: #38322e;
-        }
-        .tm-tab-btn.active {
-          color: #ff6600;
-        }
-        .tm-tab-btn.active::after {
-          content: "";
-          position: absolute;
-          left: 0;
-          bottom: -1px;
-          width: 100%;
-          height: 2px;
-          background-color: #ff6600;
-        }
-        /* Tab Contents Area */
-        .tm-tab-body {
-          flex-grow: 1;
-          overflow-y: auto;
-          padding-right: 1rem;
-          margin-bottom: 1.5rem;
-        }
-        /* Scrollbar styling */
-        .tm-tab-body::-webkit-scrollbar {
-          width: 4px;
-        }
-        .tm-tab-body::-webkit-scrollbar-track {
-          background: #ffffff;
-        }
-        .tm-tab-body::-webkit-scrollbar-thumb {
-          background: #d1c7bd;
-          border-radius: 2px;
-        }
-        .tm-tab-content {
-          display: none;
-        }
-        .tm-tab-content.active {
-          display: block;
-        }
-        /* Right Column: Key Visual */
-        .tm-right-col {
-          padding: 0 4rem 2rem 3.5rem; /* Set top padding to 0 for flush fitting */
-          display: flex;
-          flex-direction: column;
-          justify-content: flex-start;
-          box-sizing: border-box;
-        }
-        @media (max-width: 1024px) {
-          .tm-right-col {
-            padding: 2rem;
-          }
-        }
-        /* Key Visual Card */
-        .tm-kv-card {
-          width: 100%;
-          display: flex;
-          flex-direction: column;
-          height: 100%;
-        }
-        .tm-kv-frame {
-          border: 1px solid #d1c7bd;
-          border-top: none; /* Make it seamlessly touch the orange line */
-          aspect-ratio: 16/9;
-          overflow: hidden;
-          background-color: #e8e4db;
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          width: 100%;
-        }
-        .tm-kv-img {
-          width: 100%;
-          height: 100%;
-          object-fit: cover;
-          opacity: 0;
-          transform: scale(1.08);
-          animation: kvReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
-        }
-        @keyframes kvReveal {
-          to {
-            opacity: 1;
-            transform: scale(1);
-          }
-        }
-        .tm-kv-footer {
-          display: flex;
-          justify-content: space-between;
-          margin-top: 0.5rem;
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.65rem;
-          font-weight: 600;
-          color: #a89f95;
-          letter-spacing: 0.05em;
-        }
-        /* Left-bottom corner label & Entry Button */
-        .tm-entry-container {
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          margin-top: auto;
-        }
-        .tm-corner-text-left-bottom {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.7rem;
-          font-weight: 700;
-          letter-spacing: 0.1em;
-          color: #a89f95;
-        }
-        .tm-entry-btn-card {
-          display: inline-block;
-          border: 1px solid #d1c7bd;
-          background-color: #ffffff;
-          color: #38322e;
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.25em;
-          padding: 0.6rem 2.2rem;
-          text-decoration: none;
-          text-align: center;
-          transition: border-color 0.2s ease, background-color 0.2s ease;
-          border-radius: 1px;
-        }
-        .tm-entry-btn-card:hover {
-          border-color: #ff6600;
-          background-color: #fcfbfa;
-          color: #ff6600;
-        }
-        /* Markdown override for beige theme */
-        .tm-markdown {
-          color: #6e655c;
-          line-height: 1.8;
-          font-size: 0.8rem;
-        }
-        .tm-markdown h1, .tm-markdown h2, .tm-markdown h3 {
-          font-family: 'Outfit', 'Noto Sans JP', sans-serif;
-          color: #38322e;
-          margin-top: 1.5rem;
-          margin-bottom: 0.75rem;
-          font-weight: 700;
-          font-size: 1rem;
-        }
-        .tm-markdown p {
-          margin-bottom: 1rem;
-        }
-        .tm-markdown ul {
-          padding-left: 1.25rem;
-          margin-bottom: 1rem;
-        }
-        .tm-markdown li {
-          margin-bottom: 0.4rem;
-        }
-        .tm-markdown table {
-          width: 100%;
-          border-collapse: collapse;
-          margin: 1.25rem 0;
-          font-size: 0.75rem;
-        }
-        .tm-markdown th, .tm-markdown td {
-          border: 1px solid #e2ded5;
-          padding: 0.6rem;
-          text-align: left;
-        }
-        .tm-markdown th {
-          background-color: #f5f2eb;
-          font-weight: 700;
-          color: #38322e;
-        }
-        .tm-markdown tr:nth-child(even) {
-          background-color: #fdfdfc;
-        }
-        .tm-member-tag {
-          display: inline-block;
-          background-color: #f5f2eb;
-          color: #6e655c;
-          font-size: 0.75rem;
-          font-weight: 600;
-          padding: 0.25rem 0.6rem;
-          border-radius: 2px;
-          margin-right: 0.4rem;
-          margin-bottom: 0.4rem;
-          border: 1px solid #e2ded5;
-        }
-        .tm-timeline-mini {
-          display: flex;
-          flex-direction: column;
-          gap: 1.25rem;
-        }
-        .tm-timeline-mini-item {
-          display: flex;
-          flex-direction: column;
-          border-left: 2px solid #ff6600;
-          padding-left: 0.75rem;
-        }
-        .tm-timeline-mini-date {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.6rem;
-          font-weight: 700;
-          color: #a89f95;
-          letter-spacing: 0.1em;
-        }
-        .tm-timeline-mini-title {
-          font-size: 0.85rem;
-          font-weight: 700;
-          color: #38322e;
-          margin-top: 0.15rem;
-        }
-        /* Top Navigation Header Link (Back to archive) */
-        .tm-top-header {
-          position: absolute;
-          top: -3.5rem;
-          left: 0;
-          width: 100%;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-        .tm-top-back-btn {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.75rem;
-          font-weight: 700;
-          letter-spacing: 0.25em;
-          color: #a89f95;
-          text-decoration: none;
-          transition: color 0.2s ease;
-        }
-        .tm-top-back-btn:hover {
-          color: #ff6600;
-        }
-      </style>
-
-      <div class="tm-page-bg">
-        <!-- White Panel Card -->
-        <div class="tm-panel">
+      <div class="container">
+        <div style="margin-bottom: 2rem; display: flex; justify-content: space-between; align-items: center;">
+          <a href="#tournament" style="color:var(--color-accent); font-weight:700; font-size:0.9rem; text-decoration:none;">
+            &larr; 大会一覧へ戻る
+          </a>
           
-          <!-- Top Back Link / Lang outside the panel but absolute to it -->
-          <div class="tm-top-header">
-            <a href="#tournament" class="tm-top-back-btn">&larr; BACK TO ARCHIVE</a>
-            
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-              <label for="tournament-lang-select" style="font-size: 0.65rem; font-weight: 800; color: #a89f95; font-family: 'Outfit', sans-serif; letter-spacing: 0.1em;">LANG // </label>
-              <select id="tournament-lang-select" class="form-control" style="padding: 0.2rem 1.2rem 0.2rem 0.5rem; font-size: 0.75rem; width: auto; height: auto; font-weight: 700; border-color: #d1c7bd; background: #ffffff; color: #38322e; font-family: 'Outfit', sans-serif; border-radius: 1px;">
-                <option value="ja" ${tournamentActiveLang === "ja" ? "selected" : ""}>JA</option>
-                <option value="en" ${tournamentActiveLang === "en" ? "selected" : ""}>EN</option>
-              </select>
-            </div>
+          <!-- Language Selector Dropdown -->
+          <div style="display: flex; align-items: center; gap: 0.5rem;">
+            <label for="tournament-lang-select" style="font-size: 0.8rem; font-weight: 700; color: var(--color-text-sub); font-family: var(--font-outfit);">DISPLAY LANGUAGE:</label>
+            <select id="tournament-lang-select" class="form-control" style="padding: 0.25rem 1.5rem 0.25rem 0.75rem; font-size: 0.8rem; width: auto; height: auto; font-weight: 700; border-color: var(--color-border);">
+              <option value="ja" ${tournamentActiveLang === "ja" ? "selected" : ""}>日本語 (JA)</option>
+              <option value="en" ${tournamentActiveLang === "en" ? "selected" : ""}>English (EN)</option>
+            </select>
           </div>
-
-          <!-- Top Section: Title & Corner labels -->
-          <div class="tm-panel-top">
-            <span class="tm-corner-text-left-top">Inter</span>
-            <span class="tm-corner-text-right-top">ENTRY</span>
-            <h1 class="tm-title-animated">
-              ${animatedTitleHtml}
-            </h1>
-          </div>
-
-          <!-- Middle Orange Divider Line with Speech Bubble Tail -->
-          <div class="tm-orange-line-container">
-            <div class="tm-line-left-segment"></div>
-            <div class="tm-line-v-tail">
-              <svg width="24" height="16" viewBox="0 0 24 16" fill="none">
-                <path d="M0 1 L10 1 L12 11 L14 1 L24 1" stroke="#ff6600" stroke-width="2" fill="none"/>
-              </svg>
-            </div>
-            <div class="tm-line-right-segment"></div>
-          </div>
-
-          <!-- Bottom Section: 2 Columns -->
-          <div class="tm-panel-bottom">
-            <!-- Left Column: Tabs, Contents, Entry -->
-            <div class="tm-left-col">
-              <!-- Tabs Header -->
-              <div class="tm-tabs-header">
-                <button class="tm-tab-btn active" data-tab="about">ABOUT</button>
-                <button class="tm-tab-btn" data-tab="regulation">REGULATION</button>
-                <button class="tm-tab-btn" data-tab="result">RESULT</button>
-              </div>
-
-              <!-- Tab Contents -->
-              <div class="tm-tab-body">
-                <!-- Tab 1: ABOUT (Schedule only) -->
-                <div class="tm-tab-content active" id="tm-tab-content-about">
-                  <div class="tm-markdown">
-                    ${timelineHtml}
-                  </div>
-                </div>
-
-                <!-- Tab 2: REGULATION -->
-                <div class="tm-tab-content" id="tm-tab-content-regulation">
-                  <div class="tm-markdown">
-                    ${rulesHtml}
-                  </div>
-                </div>
-
-                <!-- Tab 3: RESULT -->
-                <div class="tm-tab-content" id="tm-tab-content-result">
-                  <div class="tm-markdown">
-                    ${hasResults ? resultsHtml : `<p>${isEn ? "*No results recorded yet.*" : "*現在、対戦結果は登録されていません。*"}</p>`}
-                    
-                    ${t.archiveUrl ? `
-                      <h3 style="margin-top: 2rem;">${isEn ? "STREAM ARCHIVE" : "配信アーカイブ"}</h3>
-                      <div class="video-embed-container" style="max-width:100%; border: 1px solid #d1c7bd; border-radius: 2px; overflow: hidden; margin-top: 0.75rem; aspect-ratio: 16/9;">
-                        <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen style="border: none; width: 100%; height: 100%;"></iframe>
-                      </div>
-                    ` : ""}
-                  </div>
-                </div>
-              </div>
-
-              <!-- Entry button at the bottom -->
-              <div class="tm-entry-container">
-                <span class="tm-corner-text-left-bottom">Inter</span>
-                <a href="${t.entryUrl || "javascript:void(0)"}" ${t.entryUrl ? 'target="_blank"' : `onclick="alert('${isEn ? "Entry is closed or not available." : "エントリー受付は終了したか、または未設定です。"}')"`} class="tm-entry-btn-card">
-                  ENTRY
-                </a>
-              </div>
-            </div>
-
-            <!-- Right Column: Key Visual -->
-            <div class="tm-right-col">
-              <div class="tm-kv-card">
-                <div class="tm-kv-frame">
-                  ${t.image ? `
-                    <img src="${t.image}" alt="${titleText}" class="tm-kv-img">
-                  ` : `
-                    <div style="font-family: 'Outfit', sans-serif; font-size: 0.75rem; font-weight: 700; color: #a89f95; letter-spacing: 0.1rem;">NO KEY VISUAL</div>
-                  `}
-                </div>
-                <div class="tm-kv-footer">
-                  <span>Tournament Key Visual</span>
-                  <span>16:9</span>
-                </div>
-              </div>
-            </div>
-          </div>
-
         </div>
+
+        ${t.status === "draft" ? `
+          <div class="draft-preview-banner" style="background-color: var(--color-accent); color: var(--color-bg); padding: 0.75rem 1.5rem; margin-bottom: 2rem; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 4px;">
+            <i data-lucide="eye-off" style="width:16px; height:16px;"></i>
+            ${isEn ? "ADMIN PREVIEW: This tournament is currently in DRAFT status." : "管理者用プレビュー：この大会情報は現在「下書き」状態です。一般ユーザーには公開されていません。"}
+          </div>
+        ` : ""}
+
+        ${t.image ? `
+          <div class="tournament-key-visual" style="width: 100%; max-height: 450px; aspect-ratio: 16/9; overflow: hidden; border: 1px solid var(--color-border); margin-bottom: 2.5rem; background-color: #000; display: flex; justify-content: center; align-items: center; border-radius: 4px;">
+            <img src="${t.image}" alt="${titleText} キービジュアル" style="width: 100%; height: 100%; object-fit: cover; opacity: 0; transform: scale(1.08); animation: kvReveal 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;">
+          </div>
+          <style>
+            @keyframes kvReveal {
+              from {
+                opacity: 0;
+                transform: scale(1.08);
+              }
+              to {
+                opacity: 1;
+                transform: scale(1);
+              }
+            }
+          </style>
+        ` : ""}
+
+        <div class="series-hero" style="background-color: var(--color-bg-sub); border: 1px solid var(--color-border); padding: 2rem 3rem; margin-bottom: 2.5rem;">
+          <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem; margin-bottom:0.75rem;">
+            <span class="tournament-status-badge ${t.status}" style="margin-bottom:0;">
+              ${t.status === "draft" ? (isEn ? "DRAFT / ADMIN ONLY" : "下書き / 管理者限定") : (t.status === "upcoming" ? (isEn ? "UPCOMING / ENTRY OPEN" : "開催予定 / エントリー受付中") : (isEn ? "COMPLETED / ARCHIVED" : "開催終了 / アーカイブ保管済"))}
+            </span>
+            <span style="font-size:0.85rem; color:var(--color-text-light); font-weight:600; font-family:var(--font-outfit);">
+              ${series ? series.title : "共通"}
+            </span>
+          </div>
+          <h1 class="font-outfit" style="font-size: 2.25rem; font-weight: 800; margin-bottom: 1rem;">
+            ${titleText}
+          </h1>
+          <div style="display:flex; gap:1.5rem; font-size:0.85rem; color:var(--color-text-sub); flex-wrap:wrap;">
+            <span><i data-lucide="calendar" style="width:12px; height:12px; display:inline; margin-right:0.25rem;"></i> ${isEn ? "Date" : "開催日"}: ${t.date}</span>
+            ${hasParticipants ? `<span><i data-lucide="users" style="width:12px; height:12px; display:inline; margin-right:0.25rem;"></i> ${isEn ? "Players" : "参加者"}: ${t.participants.length}名</span>` : ""}
+          </div>
+        </div>
+
+        <!-- Tab Navigation -->
+        <div class="tabs">
+          ${tabsHtml}
+        </div>
+
+        <!-- Tab Contents -->
+        <!-- Panel 1: Overview -->
+        <div class="tab-content active" id="tab-detail-overview">
+          <div class="series-grid">
+            <div class="markdown-body">
+              <h3 class="font-outfit" style="margin-top:0;">${isEn ? "Tournament Overview" : "大会概要"}</h3>
+              <p>${isEn ? `This official archive page documents the tournament "${titleText}". Complete regulations, match results, and video broadcasts are preserved here.` : `本アーカイブページは、「${titleText}」の公式記録です。レギュレーション詳細、対戦結果、および配信動画が記録されています。`}</p>
+              
+              ${t.archiveUrl ? `
+                <div style="margin: 2rem 0;">
+                  <h4 class="font-outfit" style="margin-bottom:1rem;"><i data-lucide="play-circle" style="color:var(--color-accent);"></i> ${isEn ? "Stream Archive" : "配信アーカイブ"}</h4>
+                  <div class="video-embed-container" style="max-width:700px;">
+                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen></iframe>
+                  </div>
+                </div>
+              ` : `<p style='color:var(--color-text-light);'>${isEn ? "※ No stream archive available." : "※配信アーカイブは未登録です。"}</p>`}
+            </div>
+
+            <aside>
+              <div class="tournament-sidebar-card">
+                <h3 class="font-outfit" style="font-size:1.1rem; margin-bottom:1rem;">${isEn ? "Quick Info" : "大会情報概要"}</h3>
+                <ul style="list-style:none; font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
+                  <li style="display:flex; justify-content:space-between;">
+                    <span style="color:var(--color-text-sub);">${isEn ? "Status" : "状況"}:</span>
+                    <strong style="text-transform:uppercase;">${t.status}</strong>
+                  </li>
+                  <li style="display:flex; justify-content:space-between;">
+                    <span style="color:var(--color-text-sub);">${isEn ? "Date" : "開催日"}:</span>
+                    <strong>${t.date}</strong>
+                  </li>
+                  ${hasParticipants ? `
+                    <li style="display:flex; justify-content:space-between;">
+                      <span style="color:var(--color-text-sub);">${isEn ? "Players" : "参加人数"}:</span>
+                      <strong>${t.participants.length}名</strong>
+                    </li>
+                  ` : ""}
+                </ul>
+              </div>
+            </aside>
+          </div>
+        </div>
+
+        <!-- Panel 2: Rules -->
+        <div class="tab-content" id="tab-detail-rules">
+          <div class="markdown-body">
+            ${rulesHtml}
+          </div>
+        </div>
+
+        ${resultsPanelHtml}
+        ${participantsPanelHtml}
       </div>
     `;
 
@@ -1994,19 +1575,17 @@ function renderTournamentDetail(container, tournamentId) {
       });
     }
 
-    // Re-bind Tab triggers
-    const tabBtns = container.querySelectorAll(".tm-tab-btn");
-    tabBtns.forEach(btn => {
+    // Re-bind Tab Navigation
+    const tabButtons = container.querySelectorAll(".tab-btn");
+    const tabContents = container.querySelectorAll(".tab-content");
+    tabButtons.forEach(btn => {
       btn.addEventListener("click", () => {
-        const targetTab = btn.getAttribute("data-tab");
-        
-        // Remove active class from all buttons and contents
-        tabBtns.forEach(b => b.classList.remove("active"));
-        container.querySelectorAll(".tm-tab-content").forEach(c => c.classList.remove("active"));
-        
-        // Add active class to clicked button and target content
+        tabButtons.forEach(b => b.classList.remove("active"));
+        tabContents.forEach(c => c.classList.remove("active"));
         btn.classList.add("active");
-        container.querySelector(`#tm-tab-content-${targetTab}`).classList.add("active");
+        const panelId = `tab-detail-${btn.dataset.tab}`;
+        const targetPanel = container.querySelector(`#${panelId}`);
+        if (targetPanel) targetPanel.classList.add("active");
       });
     });
   }
@@ -2324,7 +1903,7 @@ function renderCMSList(target) {
 
     // Hook Handlers
     target.querySelector("#cms-create-new-btn").addEventListener("click", () => {
-      cmsEditingItem = { id: "", title: "", status: "draft", date: new Date().toISOString().split("T")[0], seriesId: "sami", rules: "", rules_en: "", participants: [], results: "", results_en: "", archiveUrl: "", image: "", entryUrl: "" };
+      cmsEditingItem = { id: "", title: "", status: "draft", date: new Date().toISOString().split("T")[0], seriesId: "sami", rules: "", participants: [], results: "", archiveUrl: "", image: "" };
       renderCMSDashboard(document.getElementById("app"));
     });
 
@@ -2774,15 +2353,9 @@ function renderCMSForm(target) {
               <input type="text" id="form-tournament-image" class="form-control" value="${cmsEditingItem.image || ""}" placeholder="https://res.cloudinary.com/... または画像のURLを入力">
             </div>
 
-            <div class="cms-form-row">
-              <div class="form-group">
-                <label for="form-tournament-participants">参加登録メンバー (カンマ区切り)</label>
-                <input type="text" id="form-tournament-participants" class="form-control" value="${(cmsEditingItem.participants || []).join(", ")}" placeholder="Dr. Texas, Dr. Kal'tsit">
-              </div>
-              <div class="form-group">
-                <label for="form-tournament-entry-url">エントリー登録用外部URL (任意)</label>
-                <input type="url" id="form-tournament-entry-url" class="form-control" value="${cmsEditingItem.entryUrl || ""}" placeholder="https://forms.gle/... などの登録フォームURL">
-              </div>
+            <div class="form-group">
+              <label for="form-tournament-participants">参加登録メンバー (カンマ区切り)</label>
+              <input type="text" id="form-tournament-participants" class="form-control" value="${(cmsEditingItem.participants || []).join(", ")}" placeholder="Dr. Texas, Dr. Ch'en">
             </div>
 
 
@@ -2957,7 +2530,6 @@ function renderCMSForm(target) {
       
       const pVal = target.querySelector("#form-tournament-participants").value;
       const pArray = pVal.split(",").map(p => p.trim()).filter(p => p !== "");
-      const entryUrlVal = target.querySelector("#form-tournament-entry-url").value.trim();
 
       const payload = {
         id: cmsEditingItem.id,
@@ -2973,8 +2545,7 @@ function renderCMSForm(target) {
         rules_en: rulesEnText.value.trim(),
         results: resultsJaText.value.trim(),
         results_en: resultsEnText.value.trim(),
-        image: imageInput.value.trim(),
-        entryUrl: entryUrlVal
+        image: imageInput.value.trim()
       };
 
       saveTournament(payload);
