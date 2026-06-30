@@ -2782,5 +2782,16 @@ li {
   padding: 0.4rem 0.8rem !important;
 }
 
+/* --- Container Query for Series Cards --- */
+.is-card {
+  container-type: inline-size;
+}
+
+@container (max-width: 260px) {
+  .is-card-body-wrap {
+    display: none !important;
+  }
+}
+
 
 
