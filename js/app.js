@@ -1868,45 +1868,49 @@ function renderTournamentDetail(container, tournamentId) {
           <div class="tm-details-section">
             <div class="tm-details-content">
               
-                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen></iframe>
-                  </div>
-                </div>
-              ` : `<p style='color:var(--color-text-light);'>${isEn ? "※ No stream archive available." : "※配信アーカイブは未登録です。"}</p>`}
-            </div>
-
-            <aside>
-              <div class="tournament-sidebar-card">
-                <h3 class="font-outfit" style="font-size:1.1rem; margin-bottom:1rem;">${isEn ? "Quick Info" : "大会情報概要"}</h3>
-                <ul style="list-style:none; font-size:0.85rem; display:flex; flex-direction:column; gap:0.5rem;">
-                  <li style="display:flex; justify-content:space-between;">
-                    <span style="color:var(--color-text-sub);">${isEn ? "Status" : "状況"}:</span>
-                    <strong style="text-transform:uppercase;">${t.status}</strong>
-                  </li>
-                  <li style="display:flex; justify-content:space-between;">
-                    <span style="color:var(--color-text-sub);">${isEn ? "Date" : "開催日"}:</span>
-                    <strong>${t.date}</strong>
-                  </li>
-                  ${hasParticipants ? `
-                    <li style="display:flex; justify-content:space-between;">
-                      <span style="color:var(--color-text-sub);">${isEn ? "Players" : "参加人数"}:</span>
-                      <strong>${t.participants.length}名</strong>
-                    </li>
-                  ` : ""}
-                </ul>
+              <!-- 1. REGULATION -->
+              <h2 class="tm-section-title">
+                <i data-lucide="shield-alert" style="width:18px; height:18px; color:#c75928; display:inline-block; vertical-align:middle;"></i>
+                ${isEn ? "REGULATION" : "大会規約・ルール"}
+              </h2>
+              <div class="tm-markdown">
+                ${rulesHtml}
               </div>
-            </aside>
-          </div>
-        </div>
 
-        <!-- Panel 2: Rules -->
-        <div class="tab-content" id="tab-detail-rules">
-          <div class="markdown-body">
-            ${rulesHtml}
-          </div>
-        </div>
+              <!-- 2. RESULT & ARCHIVE -->
+              <h2 class="tm-section-title">
+                <i data-lucide="trophy" style="width:18px; height:18px; color:#c75928; display:inline-block; vertical-align:middle;"></i>
+                ${isEn ? "TOURNAMENT RESULTS" : "対戦成績・リザルト"}
+              </h2>
+              <div class="tm-markdown">
+                ${hasResults ? resultsHtml : `<p>${isEn ? "*No results recorded yet.*" : "*現在、対戦結果は登録されていません。*"}</p>`}
+                
+                ${t.archiveUrl ? `
+                  <h3 style="margin-top: 2.5rem; display:flex; align-items:center; gap:0.5rem;">
+                    <i data-lucide="play-circle" style="color:#c75928; width:16px; height:16px;"></i>
+                    ${isEn ? "STREAM ARCHIVE" : "配信アーカイブ"}
+                  </h3>
+                  <div class="video-embed-container" style="max-width:100%; border: 1px solid #edd9c0; border-radius: 6px; overflow: hidden; margin-top: 1rem; aspect-ratio: 16/9;">
+                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen style="border: none; width: 100%; height: 100%;"></iframe>
+                  </div>
+                ` : ""}
+              </div>
 
-        ${resultsPanelHtml}
-        ${participantsPanelHtml}
+              <!-- 3. MEMBERS -->
+              ${hasParticipants ? `
+                <h2 class="tm-section-title">
+                  <i data-lucide="users" style="width:18px; height:18px; color:#c75928; display:inline-block; vertical-align:middle;"></i>
+                  ${isEn ? "REGISTERED MEMBERS" : "エントリーメンバー一覧"}
+                </h2>
+                <ul class="tm-member-list">
+                  ${t.participants.map(p => `<li class="tm-member-badge"><i data-lucide="user" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:0.25rem; color:#c75928;"></i> ${p}</li>`).join("")}
+                </ul>
+              ` : ""}
+
+            </div>
+          </div>
+
+        </div>
       </div>
     `;
 
@@ -1921,20 +1925,6 @@ function renderTournamentDetail(container, tournamentId) {
         renderContent();
       });
     }
-
-    // Re-bind Tab Navigation
-    const tabButtons = container.querySelectorAll(".tab-btn");
-    const tabContents = container.querySelectorAll(".tab-content");
-    tabButtons.forEach(btn => {
-      btn.addEventListener("click", () => {
-        tabButtons.forEach(b => b.classList.remove("active"));
-        tabContents.forEach(c => c.classList.remove("active"));
-        btn.classList.add("active");
-        const panelId = `tab-detail-${btn.dataset.tab}`;
-        const targetPanel = container.querySelector(`#${panelId}`);
-        if (targetPanel) targetPanel.classList.add("active");
-      });
-    });
   }
 
   renderContent();
