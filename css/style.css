@@ -2821,9 +2821,9 @@ li {
   color: var(--color-accent);
 }
 
-/* Threshold 1: When card width is 800px or less (Title would wrap) */
+/* Threshold 1: When card width is 1200px or less (Title would wrap) */
 /* Hide Japanese Title and "VIEW ARCHIVES", display only "IS#x" and "ENTER ->" in one row (right-aligned) */
-@container (max-width: 800px) {
+@container (max-width: 1200px) {
   .is-card-body-wrap {
     flex-direction: row !important;
     justify-content: flex-end !important;
