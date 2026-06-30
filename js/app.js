@@ -243,6 +243,9 @@ function init() {
   initCustomCursor();
   // Setup routing listener
   window.addEventListener("hashchange", handleRouting);
+  window.addEventListener("scroll", handleHeaderScroll);
+  // Run once initially
+  setTimeout(handleHeaderScroll, 100);
   // Initial route
   handleRouting();
 }
@@ -309,15 +312,10 @@ function handleRouting() {
     window.lucide.createIcons();
   }
 
-  // Toggle transparent header for home hero video
-  const header = document.querySelector(".app-header");
-  if (header) {
-    if (hash === "#home") {
-      header.classList.add("transparent-header");
-    } else {
-      header.classList.remove("transparent-header");
-    }
-  }
+  
+
+  // Update header transparency based on route and scroll
+  handleHeaderScroll();
 
   // Scroll to top
   window.scrollTo(0, 0);
@@ -2893,4 +2891,24 @@ function initHeroVideoSlideshow(container) {
       currentIdx = nextIdx;
     });
   }, 5000);
+}
+
+/* Scroll handler for transparent sticky header on Home */
+function handleHeaderScroll() {
+  const header = document.querySelector(".app-header");
+  if (!header) return;
+  
+  const hash = window.location.hash || "#home";
+  if (hash === "#home" || hash === "") {
+    if (window.scrollY > 20) {
+      header.classList.remove("transparent-header");
+      header.classList.add("scrolled-header");
+    } else {
+      header.classList.add("transparent-header");
+      header.classList.remove("scrolled-header");
+    }
+  } else {
+    header.classList.remove("transparent-header");
+    header.classList.remove("scrolled-header");
+  }
 }
