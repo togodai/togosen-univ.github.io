@@ -511,15 +511,22 @@ function renderHome(container) {
   // Get latest tournament (upcoming preferred, otherwise completed)
   const activeTournament = tournaments.find(t => t.status === "upcoming") || tournaments[0];
 
+  // 背景動画のリスト（将来的にここに追加・削除するだけで、HTMLもスライドショーも自動的に追従します）
+  const heroVideos = [
+    "./videos/hero1.mp4",
+    "./videos/hero2.mp4",
+    "./videos/hero3.mp4"
+  ];
+
   container.innerHTML = `
     <!-- Hero Section with Video Slideshow Background -->
     <div class="hero" style="min-height: calc(100vh - 80px); display: flex; align-items: center; justify-content: flex-start; text-align: left; padding: 4rem 0; box-sizing: border-box; position: relative; overflow: hidden;">
       
       <!-- Video Slideshow Container -->
       <div class="hero-video-bg" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; overflow: hidden;">
-        <video class="hero-video active" src="./videos/hero1.mp4" loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out; z-index: 1;"></video>
-        <video class="hero-video" src="./videos/hero2.mp4" loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out; z-index: 1;"></video>
-        <video class="hero-video" src="./videos/hero3.mp4" loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out; z-index: 1;"></video>
+        ${heroVideos.map((src, idx) => `
+          <video class="hero-video ${idx === 0 ? 'active' : ''}" src="${src}" loop muted playsinline style="position: absolute; top: 50%; left: 50%; width: 100%; height: 100%; object-fit: cover; transform: translate(-50%, -50%); opacity: 0; transition: opacity 1.5s ease-in-out; z-index: 1;"></video>
+        `).join("")}
         
         <!-- Gradient Overlay (下に行くほど透明度が下がる＝背景色のベージュに完全に溶け込む) -->
         <div class="hero-video-overlay" style="position: absolute; inset: 0; background: linear-gradient(to bottom, rgba(234, 232, 227, 0) 30%, rgba(234, 232, 227, 0.7) 75%, rgba(234, 232, 227, 1) 100%); z-index: 2; pointer-events: none;"></div>
@@ -2865,6 +2872,11 @@ function initHeroVideoSlideshow(container) {
   
   // Start playing the first video
   videos[currentIdx].play().catch(e => console.log("Autoplay blocked by browser policy:", e));
+  
+  // If there's only 1 video, do not start the rotation interval (plays as a single smooth loop)
+  if (videos.length === 1) {
+    return;
+  }
   
   // Set interval for 5 seconds rotation
   const slideshowInterval = setInterval(() => {
