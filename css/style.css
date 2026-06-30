@@ -2861,7 +2861,7 @@ li {
 }
 
 .hero-video.active {
-  opacity: 0.7 !important; /* 背景動画をより鮮明に見せるために70%に引き上げ */
+  opacity: 0.55 !important; /* 背景動画の不透明度を55%に微調整 */
 }
 
 /* --- Transparent & Sticky Header for Home --- */
