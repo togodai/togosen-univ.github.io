@@ -261,6 +261,27 @@ function handleRouting() {
     return;
   }
   
+  // Toggle header/footer visibility for tournament detail page (independent minimal LP)
+  const header = document.querySelector(".app-header");
+  const footer = document.querySelector(".app-footer");
+  const mainEl = document.querySelector(".app-main");
+  
+  if (hash.startsWith("#tournament/")) {
+    if (header) header.style.display = "none";
+    if (footer) footer.style.display = "none";
+    if (mainEl) {
+      mainEl.style.padding = "0";
+      mainEl.style.marginTop = "0";
+    }
+  } else {
+    if (header) header.style.display = "";
+    if (footer) footer.style.display = "";
+    if (mainEl) {
+      mainEl.style.padding = "";
+      mainEl.style.marginTop = "";
+    }
+  }
+
   // Route matching
   if (hash === "#home") {
     console.log("Routing to home");
@@ -1333,7 +1354,53 @@ function renderTournamentPage(container) {
         TOURNAMENT ARCHIVES
       </h1>
       <p style="color:var(--color-text-sub); margin-bottom: 3rem; max-width:800px; line-height:1.7;">
-        TOGOSEN Univで定期的に開催されている統合戦略大会の特設ページです。過去の対戦結果、使用されたレギュレーション�function renderTournamentDetail(container, tournamentId) {
+        TOGOSEN Univで定期的に開催されている統合戦略大会の特設ページです。過去の対戦結果、使用されたレギュレーション、大会配信アーカイブおよび参加者リストを公式記録として保存しています。
+      </p>
+
+      <div class="tournament-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 2rem;">
+        ${tournaments.map(t => {
+          const series = getSeriesById(t.seriesId);
+          return `
+            <div class="tournament-status-card" style="border: 1px solid var(--color-border); background-color: var(--color-bg); display: flex; flex-direction: column; justify-content: space-between; min-height: 250px; overflow: hidden; border-radius: 6px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); transition: transform 0.2s ease, box-shadow 0.2s ease;">
+              ${t.image ? `
+                <div style="width: 100%; height: 180px; overflow: hidden; border-bottom: 1px solid var(--color-border);">
+                  <img src="${t.image}" alt="" style="width: 100%; height: 100%; object-fit: cover; transition: transform 0.3s ease;">
+                </div>
+              ` : ""}
+              <div style="padding: 1.5rem; display: flex; flex-direction: column; justify-content: space-between; flex-grow: 1;">
+                <div>
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
+                    <span class="tournament-status-badge ${t.status}" style="font-size: 0.7rem; font-weight: 700; padding: 0.15rem 0.5rem; text-transform: uppercase; margin-bottom: 0;">
+                      ${t.status === "draft" ? "下書き" : (t.status === "upcoming" ? "開催予定" : "開催終了")}
+                    </span>
+                    <span style="font-size: 0.75rem; color: var(--color-text-light); font-weight: 600; font-family: var(--font-outfit);">
+                      ${series ? series.title : "共通"}
+                    </span>
+                  </div>
+                  <h3 style="font-size: 1.25rem; font-weight: 700; line-height: 1.3; margin-bottom: 0.5rem;">${t.title}</h3>
+                </div>
+                <div style="margin-top: 1.5rem;">
+                  <div style="font-size: 0.8rem; color: var(--color-text-sub); display: flex; flex-direction: column; gap: 0.25rem; margin-bottom: 1rem;">
+                    <span><i data-lucide="calendar" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 開催日: ${t.date}</span>
+                    <span><i data-lucide="users" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle; margin-right: 0.25rem;"></i> 登録メンバー: ${t.participants.length}名</span>
+                  </div>
+                  <a href="#tournament/${t.id}" class="btn-primary" style="display: block; text-align: center; font-size: 0.85rem; padding: 0.5rem; font-weight: 700;">
+                    特設アーカイブへ ENTER &rarr;
+                  </a>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join("")}
+      </div>
+    </div>
+  `;
+}
+
+// --- RENDERING TOURNAMENT DETAIL PAGE ---
+let tournamentActiveLang = "ja"; // Global language state for tournament detail
+
+function renderTournamentDetail(container, tournamentId) {
   const tournaments = getTournaments();
   const t = tournaments.find(x => x.id === tournamentId);
   
@@ -1357,118 +1424,96 @@ function renderTournamentPage(container) {
     const rulesHtml = renderMarkdown(isEn ? (t.rules_en || t.rules) : t.rules);
     const resultsHtml = renderMarkdown(isEn ? (t.results_en || t.results) : t.results);
 
-    // Timeline html matching the minimalist image style
+    // Dynamic schedule / timeline mock based on status
     const timelineHtml = `
       <div class="tm-timeline">
         <div class="tm-timeline-item">
           <div class="tm-timeline-dot"></div>
-          <div class="tm-timeline-date">PHASE 01 // ENTRY</div>
-          <div class="tm-timeline-title">${isEn ? "REGISTRATION" : "エントリー受付"}</div>
+          <div class="tm-timeline-date">PHASE 01 // ENTRY OPEN</div>
+          <div class="tm-timeline-title">${isEn ? "Registration & Submission" : "エントリー受付・選手登録"}</div>
+          <div class="tm-timeline-desc">${isEn ? "Players register and submit their tactical plans." : "参加希望者の登録および戦術申告の受付を開始。"}</div>
         </div>
         <div class="tm-timeline-item">
           <div class="tm-timeline-dot"></div>
-          <div class="tm-timeline-date">PHASE 02 // MATCH</div>
-          <div class="tm-timeline-title">${isEn ? "TOURNAMENT EXECUTION" : "本戦トーナメント"} - ${t.date}</div>
+          <div class="tm-timeline-date">PHASE 02 // MATCH DAY</div>
+          <div class="tm-timeline-title">${isEn ? "Tournament Execution" : "本戦トーナメント開催"}</div>
+          <div class="tm-timeline-desc">開催日: ${t.date}</div>
         </div>
-        <div class="tm-timeline-item" style="opacity: ${t.status === "completed" ? "1" : "0.4"}">
+        <div class="tm-timeline-item" style="opacity: ${t.status === "completed" ? "1" : "0.5"}">
           <div class="tm-timeline-dot" style="background-color: ${t.status === "completed" ? "#ff6600" : "#a89f95"}"></div>
-          <div class="tm-timeline-date">PHASE 03 // ARCHIVE</div>
-          <div class="tm-timeline-title">${isEn ? "ANALYSIS & VIDEOS" : "結果・アーカイブ公開"}</div>
+          <div class="tm-timeline-date">PHASE 03 // ARCHIVE RELEASE</div>
+          <div class="tm-timeline-title">${isEn ? "Results & Analysis" : "対戦結果・戦術分析の公開"}</div>
+          <div class="tm-timeline-desc">${isEn ? "Final standings and video archives released." : "公式記録および大会配信アーカイブの保存完了。"}</div>
         </div>
       </div>
     `;
 
     container.innerHTML = `
       <style>
-        /* Force cover entire viewport to completely hide main site's headers/footers */
         .tm-wrapper {
-          position: fixed;
-          top: 0;
-          left: 0;
-          width: 100%;
-          height: 100%;
           background-color: #f5f2eb;
           color: #38322e;
-          z-index: 99999;
-          overflow-y: auto;
+          min-height: 100vh;
+          padding: 6rem 0;
           font-family: 'Inter', 'Noto Sans JP', sans-serif;
           box-sizing: border-box;
-          padding: 6rem 0;
+          display: flex;
+          align-items: center;
+          justify-content: center;
         }
         .tm-container {
-          max-width: 1100px;
+          max-width: 1200px;
+          width: 100%;
           margin: 0 auto;
           padding: 0 3rem;
           position: relative;
         }
         .tm-back-link {
-          position: absolute;
-          top: -3rem;
-          left: 3rem;
           font-family: 'Outfit', sans-serif;
-          font-size: 0.7rem;
+          font-size: 0.75rem;
           font-weight: 700;
           letter-spacing: 0.2em;
-          color: #8e857c;
+          color: #38322e;
           text-decoration: none;
           display: inline-flex;
           align-items: center;
           gap: 0.5rem;
-          transition: color 0.2s ease;
+          margin-bottom: 4rem;
+          transition: opacity 0.2s ease;
           border: none;
           background: none;
           cursor: pointer;
           padding: 0;
+          opacity: 0.8;
         }
         .tm-back-link:hover {
-          color: #ff6600;
-        }
-        .tm-lang-selector {
-          position: absolute;
-          top: -3rem;
-          right: 3rem;
-          display: flex;
-          align-items: center;
-          gap: 0.5rem;
+          opacity: 0.5;
         }
         .tm-grid {
           display: grid;
-          grid-template-columns: 1.3fr 1fr;
+          grid-template-columns: 1.2fr 1fr;
           gap: 5rem;
           align-items: center;
-          margin-top: 2rem;
         }
         @media (max-width: 900px) {
           .tm-grid {
             grid-template-columns: 1fr;
-            gap: 3rem;
-          }
-          .tm-wrapper {
-            padding: 4rem 0;
+            gap: 4rem;
+            align-items: start;
           }
         }
         .tm-title-area {
-          display: flex;
-          flex-direction: column;
-        }
-        .tm-title-tag {
-          font-family: 'Outfit', sans-serif;
-          font-size: 0.9rem;
-          font-weight: 800;
-          color: #ff6600;
-          letter-spacing: 0.3em;
-          margin-bottom: 0.5rem;
-          text-transform: uppercase;
+          position: relative;
         }
         .tm-title {
-          font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+          font-family: 'Noto Sans JP', sans-serif;
           font-size: 4rem;
           font-weight: 800;
-          line-height: 1.1;
-          margin: 0;
+          line-height: 1.2;
+          margin: 0 0 3rem 0;
           color: #38322e;
-          letter-spacing: -0.02em;
           word-break: keep-all;
+          letter-spacing: -0.02em;
         }
         @media (max-width: 600px) {
           .tm-title {
@@ -1478,34 +1523,35 @@ function renderTournamentPage(container) {
         .tm-meta-list {
           list-style: none;
           padding: 0;
-          margin: 3rem 0 0 0;
+          margin: 2.5rem 0;
           display: flex;
           flex-direction: column;
           gap: 1.25rem;
-          max-width: 350px;
         }
         .tm-meta-item {
           display: flex;
-          justify-content: space-between;
-          font-size: 0.7rem;
+          gap: 2rem;
+          font-size: 0.75rem;
           font-family: 'Outfit', sans-serif;
           letter-spacing: 0.15em;
-          border-bottom: 1px solid #e5e1d8;
+          border-bottom: 1px solid #e2ded5;
           padding-bottom: 0.5rem;
         }
         .tm-meta-label {
-          font-weight: 700;
-          color: #a0968b;
+          font-weight: 800;
+          color: #a89f95;
+          width: 100px;
         }
         .tm-meta-value {
           font-weight: 600;
           color: #38322e;
         }
         .tm-kv-frame {
-          border: 1px solid #dcd8cf;
-          background-color: #eae6dd;
+          border: 1px solid #d1c7bd;
+          background-color: #e8e4db;
           aspect-ratio: 16/9;
           overflow: hidden;
+          border-radius: 2px;
         }
         .tm-kv-img {
           width: 100%;
@@ -1521,7 +1567,6 @@ function renderTournamentPage(container) {
             transform: scale(1);
           }
         }
-        /* The signature orange line cutting across the page */
         .tm-orange-line {
           height: 1px;
           background-color: #ff6600;
@@ -1537,21 +1582,11 @@ function renderTournamentPage(container) {
           color: #ff6600;
           margin-bottom: 2rem;
           text-transform: uppercase;
-          position: relative;
-        }
-        .tm-section-title::after {
-          content: '';
-          display: inline-block;
-          width: 4px;
-          height: 4px;
-          background-color: #ff6600;
-          margin-left: 0.5rem;
-          vertical-align: middle;
         }
         .tm-sub-grid {
           display: grid;
-          grid-template-columns: 1fr 1.2fr;
-          gap: 6rem;
+          grid-template-columns: 1fr 1fr;
+          gap: 5rem;
         }
         @media (max-width: 900px) {
           .tm-sub-grid {
@@ -1560,78 +1595,76 @@ function renderTournamentPage(container) {
           }
         }
         .tm-markdown {
-          color: #4e463f;
+          color: #38322e;
           line-height: 1.8;
-          font-size: 0.8rem;
-          letter-spacing: 0.02em;
+          font-size: 0.85rem;
         }
         .tm-markdown h1, .tm-markdown h2, .tm-markdown h3 {
           font-family: 'Outfit', 'Noto Sans JP', sans-serif;
           color: #38322e;
           margin-top: 2rem;
-          margin-bottom: 0.75rem;
+          margin-bottom: 1.25rem;
           font-weight: 700;
-          font-size: 0.95rem;
-          letter-spacing: 0.05em;
+          border-bottom: 1px solid #e2ded5;
+          padding-bottom: 0.25rem;
         }
         .tm-markdown p {
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
         }
         .tm-markdown ul {
           padding-left: 1.25rem;
-          margin-bottom: 1rem;
+          margin-bottom: 1.25rem;
         }
         .tm-markdown li {
-          margin-bottom: 0.4rem;
+          margin-bottom: 0.5rem;
         }
         .tm-markdown table {
           width: 100%;
           border-collapse: collapse;
           margin: 1.5rem 0;
-          font-size: 0.75rem;
+          font-size: 0.8rem;
         }
         .tm-markdown th, .tm-markdown td {
-          border: 1px solid #dcd8cf;
-          padding: 0.6rem;
+          border: 1px solid #d1c7bd;
+          padding: 0.75rem;
           text-align: left;
         }
         .tm-markdown th {
           background-color: #eae6dd;
           font-weight: 700;
-          color: #38322e;
         }
         .tm-markdown tr:nth-child(even) {
-          background-color: #faf9f6;
+          background-color: #fcfbfa;
         }
         .tm-member-tag {
           display: inline-block;
           background-color: #eae6dd;
-          color: #4e463f;
-          font-size: 0.7rem;
+          color: #38322e;
+          font-size: 0.75rem;
           font-weight: 600;
-          padding: 0.3rem 0.6rem;
-          margin-right: 0.4rem;
-          margin-bottom: 0.4rem;
-          border: 1px solid #dcd8cf;
-          font-family: 'Outfit', 'Noto Sans JP', sans-serif;
+          padding: 0.35rem 0.75rem;
+          border-radius: 2px;
+          margin-right: 0.5rem;
+          margin-bottom: 0.5rem;
+          border: 1px solid #d1c7bd;
         }
         .tm-timeline {
           position: relative;
-          padding-left: 1.25rem;
-          border-left: 1px solid #dcd8cf;
+          padding-left: 1.5rem;
+          border-left: 1px solid #d1c7bd;
           display: flex;
           flex-direction: column;
-          gap: 2.25rem;
+          gap: 2.5rem;
         }
         .tm-timeline-item {
           position: relative;
         }
         .tm-timeline-dot {
           position: absolute;
-          left: calc(-1.25rem - 3.5px);
+          left: calc(-1.5rem - 4.5px);
           top: 0.35rem;
-          width: 6px;
-          height: 6px;
+          width: 8px;
+          height: 8px;
           border-radius: 50%;
           background-color: #ff6600;
         }
@@ -1639,20 +1672,19 @@ function renderTournamentPage(container) {
           font-family: 'Outfit', sans-serif;
           font-size: 0.65rem;
           font-weight: 700;
-          color: #a0968b;
+          color: #a89f95;
           letter-spacing: 0.15em;
         }
         .tm-timeline-title {
-          font-size: 0.85rem;
+          font-size: 0.9rem;
           font-weight: 700;
-          margin: 0.15rem 0;
+          margin: 0.25rem 0;
           color: #38322e;
-          letter-spacing: 0.02em;
         }
         .tm-timeline-desc {
           font-size: 0.75rem;
-          color: #7d7268;
-          line-height: 1.4;
+          color: #6e655c;
+          line-height: 1.6;
         }
         .tm-entry-btn {
           display: inline-block;
@@ -1663,10 +1695,13 @@ function renderTournamentPage(container) {
           font-weight: 700;
           letter-spacing: 0.2em;
           padding: 0.9rem 2.2rem;
+          border-radius: 2px;
+          text-decoration: none;
+          text-transform: uppercase;
+          transition: background-color 0.2s ease, transform 0.15s ease;
+          box-shadow: 0 4px 12px rgba(255, 102, 0, 0.2);
           border: none;
           cursor: pointer;
-          transition: background-color 0.2s ease, transform 0.15s ease;
-          box-shadow: 0 4px 15px rgba(255, 102, 0, 0.15);
         }
         .tm-entry-btn:hover {
           background-color: #e05500;
@@ -1676,31 +1711,32 @@ function renderTournamentPage(container) {
 
       <div class="tm-wrapper">
         <div class="tm-container">
-          
-          <!-- Header Actions -->
-          <button class="tm-back-link" onclick="location.hash='#tournament'">
-            <i data-lucide="arrow-left" style="width: 12px; height: 12px; vertical-align: middle;"></i> BACK
-          </button>
-          
-          <div class="tm-lang-selector">
-            <label for="tournament-lang-select" style="font-size: 0.65rem; font-weight: 700; color: #a0968b; font-family: 'Outfit', sans-serif; letter-spacing: 0.1em;">LANG // </label>
-            <select id="tournament-lang-select" style="padding: 0.15rem 1rem 0.15rem 0.35rem; font-size: 0.7rem; font-weight: 700; border: 1px solid #dcd8cf; background: transparent; color: #38322e; cursor: pointer; font-family: 'Outfit', sans-serif;">
-              <option value="ja" ${tournamentActiveLang === "ja" ? "selected" : ""}>JA</option>
-              <option value="en" ${tournamentActiveLang === "en" ? "selected" : ""}>EN</option>
-            </select>
+          <!-- Back Link & Lang Select -->
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 3rem;">
+            <a href="#tournament" class="tm-back-link">
+              <i data-lucide="arrow-left" style="width: 14px; height: 14px; vertical-align: middle;"></i> BACK TO ARCHIVE
+            </a>
+            
+            <div style="display: flex; align-items: center; gap: 0.5rem;">
+              <label for="tournament-lang-select" style="font-size: 0.65rem; font-weight: 800; color: #a89f95; font-family: 'Outfit', sans-serif; letter-spacing: 0.1em;">LANG // </label>
+              <select id="tournament-lang-select" class="form-control" style="padding: 0.2rem 1.2rem 0.2rem 0.5rem; font-size: 0.75rem; width: auto; height: auto; font-weight: 700; border-color: #d1c7bd; background: #fcfbfa; color: #38322e; font-family: 'Outfit', sans-serif;">
+                <option value="ja" ${tournamentActiveLang === "ja" ? "selected" : ""}>JA</option>
+                <option value="en" ${tournamentActiveLang === "en" ? "selected" : ""}>EN</option>
+              </select>
+            </div>
           </div>
 
           ${t.status === "draft" ? `
-            <div class="draft-preview-banner" style="background-color: #ff6600; color: #ffffff; padding: 0.6rem 1.25rem; margin-bottom: 2.5rem; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; gap: 0.5rem; font-family: 'Outfit', sans-serif; letter-spacing: 0.1em; max-width: fit-content;">
-              <i data-lucide="eye-off" style="width:14px; height:14px;"></i>
-              ${isEn ? "ADMIN PREVIEW // DRAFT" : "管理者用プレビュー // 下書き状態"}
+            <div class="draft-preview-banner" style="background-color: #ff6600; color: #ffffff; padding: 0.75rem 1.5rem; margin-bottom: 4rem; font-weight: 700; font-size: 0.8rem; display: flex; align-items: center; gap: 0.5rem; border-radius: 2px; font-family: 'Outfit', sans-serif; letter-spacing: 0.1em;">
+              <i data-lucide="eye-off" style="width:16px; height:16px;"></i>
+              ${isEn ? "ADMIN PREVIEW: DRAFT STATUS" : "管理者用プレビュー：この大会情報は現在「下書き」状態です。"}
             </div>
           ` : ""}
 
-          <!-- Grid Section: Title & Key Visual -->
+          <!-- Main Grid -->
           <div class="tm-grid">
+            <!-- Left Column: Title & Meta -->
             <div class="tm-title-area">
-              <span class="tm-title-tag">TOGOSEN // TOURNAMENT</span>
               <h1 class="tm-title">${titleText}</h1>
               
               <ul class="tm-meta-list">
@@ -1710,7 +1746,7 @@ function renderTournamentPage(container) {
                 </li>
                 <li class="tm-meta-item">
                   <span class="tm-meta-label">SERIES</span>
-                  <span class="tm-meta-value">${series ? series.title.toUpperCase() : "COMMON"}</span>
+                  <span class="tm-meta-value">${series ? series.title : "COMMON"}</span>
                 </li>
                 <li class="tm-meta-item">
                   <span class="tm-meta-label">STATUS</span>
@@ -1727,103 +1763,6 @@ function renderTournamentPage(container) {
               ` : ""}
             </div>
 
-            <!-- Right Column: Framed Key Visual -->
-            <div>
-              ${t.image ? `
-                <div class="tm-kv-frame">
-                  <img src="${t.image}" alt="${titleText}" class="tm-kv-img">
-                </div>
-              ` : `
-                <div class="tm-kv-frame" style="display: flex; justify-content: center; align-items: center; color: #a0968b; font-size: 0.7rem; font-family: 'Outfit', sans-serif; font-weight: 700; letter-spacing: 0.1em;">
-                  NO KEY VISUAL DEFINED //
-                </div>
-              `}
-            </div>
-          </div>
-
-          <!-- Signature Orange Line -->
-          <div class="tm-orange-line"></div>
-
-          <!-- Sub Content Section -->
-          <div class="tm-sub-grid">
-            <!-- Left Sub Column: Schedule & Members -->
-            <div>
-              <section style="margin-bottom: 4rem;">
-                <h2 class="tm-section-title">SCHEDULE</h2>
-                ${timelineHtml}
-              </section>
-
-              ${hasParticipants ? `
-                <section>
-                  <h2 class="tm-section-title">MEMBERS</h2>
-                  <div style="margin-top: 1rem;">
-                    ${t.participants.map(p => `<span class="tm-member-tag"><i data-lucide="user" style="width:10px; height:10px; display:inline-block; vertical-align:middle; margin-right:0.2rem; color:#ff6600;"></i> ${p}</span>`).join("")}
-                  </div>
-                </section>
-              ` : ""}
-            </div>
-
-            <!-- Right Sub Column: Regulation & Results -->
-            <div>
-              <section style="margin-bottom: 4rem;">
-                <h2 class="tm-section-title">REGULATION</h2>
-                <div class="tm-markdown">
-                  ${rulesHtml}
-                </div>
-              </section>
-
-              ${hasResults ? `
-                <section style="border-top: 1px solid #dcd8cf; padding-top: 4rem; margin-bottom: 4rem;">
-                  <h2 class="tm-section-title">RESULTS</h2>
-                  <div class="tm-markdown">
-                    ${resultsHtml}
-                  </div>
-                </section>
-              ` : ""}
-
-              ${t.archiveUrl ? `
-                <section style="border-top: 1px solid #dcd8cf; padding-top: 4rem;">
-                  <h2 class="tm-section-title">STREAM ARCHIVE</h2>
-                  <div class="video-embed-container" style="max-width:100%; border: 1px solid #dcd8cf; overflow: hidden; margin-top: 1.5rem;">
-                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen style="border: none; aspect-ratio: 16/9; width: 100%; height: auto;"></iframe>
-                  </div>
-                </section>
-              ` : ""}
-            </div>
-          </div>
-
-        </div>
-      </div>
-    `;
-
-    // Re-initialize icons
-    if (window.lucide) window.lucide.createIcons();
-
-    // Re-bind language selector event
-    const langSelect = container.querySelector("#tournament-lang-select");
-    if (langSelect) {
-      langSelect.addEventListener("change", (e) => {
-        tournamentActiveLang = e.target.value;
-        renderContent();
-      });
-    }
-  }
-
-  renderContent();
-}        <span class="tm-meta-label">STATUS</span>
-                  <span class="tm-meta-value" style="color: #ff6600;">${t.status.toUpperCase()}</span>
-                </li>
-              </ul>
-
-              ${t.status === "upcoming" ? `
-                <div style="margin-top: 3rem;">
-                  <button class="tm-entry-btn" onclick="alert('${isEn ? "Entry form is not available in demo mode." : "デモモードのため、エントリー登録は行えません。"}')">
-                    ${isEn ? "ENTRY / REGISTER NOW" : "エントリー登録を行う"}
-                  </button>
-                </div>
-              ` : ""}
-            </div>
-
             <!-- Right Column: Key Visual -->
             <div>
               ${t.image ? `
@@ -1831,7 +1770,7 @@ function renderTournamentPage(container) {
                   <img src="${t.image}" alt="${titleText}" class="tm-kv-img">
                 </div>
               ` : `
-                <div class="tm-kv-frame" style="display: flex; justify-content: center; align-items: center; color: #a89f95; font-size: 0.8rem; font-family: 'Outfit', sans-serif; font-weight: 600;">
+                <div class="tm-kv-frame" style="display: flex; justify-content: center; align-items: center; color: #a89f95; font-size: 0.75rem; font-family: 'Outfit', sans-serif; font-weight: 600; letter-spacing: 0.1em;">
                   NO KEY VISUAL DEFINED
                 </div>
               `}
@@ -1845,7 +1784,7 @@ function renderTournamentPage(container) {
           <div class="tm-sub-grid">
             <!-- Left Sub: Schedule & Members -->
             <div>
-              <section style="margin-bottom: 3rem;">
+              <section style="margin-bottom: 4rem;">
                 <h2 class="tm-section-title">SCHEDULE</h2>
                 ${timelineHtml}
               </section>
@@ -1853,7 +1792,7 @@ function renderTournamentPage(container) {
               ${hasParticipants ? `
                 <section>
                   <h2 class="tm-section-title">MEMBERS</h2>
-                  <div style="margin-top: 1rem;">
+                  <div style="margin-top: 1.5rem;">
                     ${t.participants.map(p => `<span class="tm-member-tag"><i data-lucide="user" style="width:12px; height:12px; display:inline-block; vertical-align:middle; margin-right:0.25rem; color:#ff6600;"></i> ${p}</span>`).join("")}
                   </div>
                 </section>
@@ -1862,7 +1801,7 @@ function renderTournamentPage(container) {
 
             <!-- Right Sub: Regulation & Results -->
             <div>
-              <section style="margin-bottom: 3rem;">
+              <section style="margin-bottom: 4rem;">
                 <h2 class="tm-section-title">REGULATION</h2>
                 <div class="tm-markdown">
                   ${rulesHtml}
@@ -1870,7 +1809,7 @@ function renderTournamentPage(container) {
               </section>
 
               ${hasResults ? `
-                <section style="border-top: 1px dashed #d1c7bd; padding-top: 3rem;">
+                <section style="border-top: 1px dashed #d1c7bd; padding-top: 4rem; margin-top: 4rem;">
                   <h2 class="tm-section-title">RESULTS</h2>
                   <div class="tm-markdown">
                     ${resultsHtml}
@@ -1879,10 +1818,10 @@ function renderTournamentPage(container) {
               ` : ""}
 
               ${t.archiveUrl ? `
-                <section style="border-top: 1px dashed #d1c7bd; padding-top: 3rem; margin-top: 3rem;">
+                <section style="border-top: 1px dashed #d1c7bd; padding-top: 4rem; margin-top: 4rem;">
                   <h2 class="tm-section-title">STREAM ARCHIVE</h2>
-                  <div class="video-embed-container" style="max-width:100%; border: 1px solid #d1c7bd; border-radius: 4px; overflow: hidden; margin-top: 1rem;">
-                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen style="border: none;"></iframe>
+                  <div class="video-embed-container" style="max-width:100%; border: 1px solid #d1c7bd; border-radius: 2px; overflow: hidden; margin-top: 1.5rem; aspect-ratio: 16/9;">
+                    <iframe src="${getYouTubeEmbedUrl(t.archiveUrl)}" allowfullscreen style="border: none; width: 100%; height: 100%;"></iframe>
                   </div>
                 </section>
               ` : ""}
